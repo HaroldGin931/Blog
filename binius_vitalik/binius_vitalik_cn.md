@@ -380,7 +380,7 @@ $$
 |**0**|0    |1    |     |**0** |0    |0    |
 |**1**|1    |0    |     |**1** |0    |1    |
 
-We can make larger binary fields by taking extensions: if we start with �2 (integers modulo 2) and then define � where �2=�+1, we get the following addition and multiplication tables:
+We can make larger binary fields by taking extensions: if we start with $F_2$ (integers modulo 2) and then define $x$ where $x^2=x+1$, we get the following addition and multiplication tables:
 
 |**+**  |**0**|**1**|**x**|**x+1**| |**\*** |**0**|**1**|**x**|**x+1**|
 |----   |---- |---- |---- |----   |-|----   |---- |---- |---- |----   |
@@ -404,7 +404,11 @@ And so on. This is often called the **tower construction**, because of how each 
 We can represent these numbers as a list of bits, eg. $1100101010001111$. The first bit represents multiples of 1, the second bit represents multiples of $x_0$ , then subsequent bits represent multiples of: $x_1, x_1 \times x_0, x_2, x_2 \times x_0$ , and so forth. This encoding is nice because you can decompose it:
 
 $$
-1100101010001111=11001010+10001111*x_3\\=1100+1010*x_2+1000*x_3+1111*x_2x_3\\=11+10*x_2+10*x_2x_1+10*x_3+11*x_2x_3+11*x_1x_2x_3\\=1+x_0+x_2+x_2x_1+x_3+x_2x_3+x_0x_2x_3+x_1x_2x_3+x_0x_1x_2x_3
+\begin{align}
+1100101010001111=11001010+10001111 \times x_3 =1100+1010  \times x_2+1000 \times x_3+1111 \times x_2x_3 \\
+=11+10 \times x_2+10 \times x_2x_1+10 \times x_3+11 \times x_2x_3+11 \times x_1x_2x_3\\
+=1+x_0+x_2+x_2x_1+x_3+x_2x_3+x_0x_2x_3+x_1x_2x_3+x_0x_1x_2x_3
+\end{align}
 $$
 
 This is a relatively uncommon notation, but I like representing binary field elements as integers, taking the bit representation where more-significant bits are to the right. That is, $1=1, x_0=01=2,1+x_0=11=3,1+x_0+x_2=11001000=19$ , and so forth. $1100101010001111$ is, in this representation, $61779$.
@@ -412,13 +416,13 @@ This is a relatively uncommon notation, but I like representing binary field ele
 Addition in binary fields is just XOR (and, incidentally, so is subtraction); note that this implies that $x+x=0$ for any $x$ . To multiply two elements $x \times y$, there's a pretty simple recursive algorithm: split each number into two halves:
 
 $$
-x=L_x+R_x*x_k~y=L_y+R_y*x_k
+x=L_x+R_x \times x_k~y=L_y+R_y\times x_k
 $$
 
 Then, split up the multiplication:
 
 $$
-x*y=(L_x*L_y)+(L_x*R_y)*x_k+(R_x*L_y)*x_k+(R_x*R_y)*x_k^2
+x\times y=(L_x\times L_y)+(L_x\times R_y)\times x_k+(R_x\times L_y)\times x_k+(R_x\times R_y)\times x_k^2
 $$
 
 The last piece is the only slightly tricky one, because you have to apply the reduction rule, and replace $R_x*R_y*x_k^2$ with $R_x*R_y*(x_{k-1}*x_k+1)$ . There are more efficient ways to do multiplication, analogues of the [Karatsuba algorithm](https://en.wikipedia.org/wiki/Karatsuba_algorithm) and [fast Fourier transforms](https://vitalik.eth.limo/general/2019/05/12/fft.html), but I will leave it as an exercise to the interested reader to figure those out.
