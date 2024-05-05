@@ -59,17 +59,16 @@ $$
 
 > A more general term for this kind of structure is a **finite field**. A [finite field](https://en.wikipedia.org/wiki/Finite_field) is a mathematical structure that obeys the usual laws of arithmetic, but where there's a limited number of possible values, and so each value can be represented in a fixed size.
 >
-> 进一步解释：有限域是一种数学结构，其包含了有限个元素，域中的元素能够进行加减乘除的运算，且计算后的结果仍是属于这个有限域，因此有限域中的每个元素都可以用固定长度表示。有限域最常见的例子是 modulus $p$ 为素数。我们依然用 modulus = 7 举例，有限域 $F_7$ 包含的元素有 $\{0, 1, 2, 3, 4, 5, 6\}$, 这个域中的每一个元素都是整数，在这个域中任取两个元素进行计算后的结果仍然属于这个域。
+> 补充：有限域是一种数学结构，其包含了有限个元素，域中的元素能够进行加减乘除的运算，且计算后的结果仍是属于这个有限域，因此有限域中的每个元素都可以用固定长度表示。有限域最常见的例子是 modulus $p$ 为素数。我们依然用 modulus = 7 举例，有限域 $F_7$ 包含的元素有 $\{0, 1, 2, 3, 4, 5, 6\}$, 这个域中的每一个元素都是整数，在这个域中任取两个元素进行计算后的结果仍然属于这个域。
 
 模算术（或素数域）是最常见的有限域类型，但也有另一种类型：扩域。您之前可能已经看过一个扩域：复数。我们“想象”一个新元素，我们用 $i$ 表示 ，并声明它满足 $i^2=−1$。然后，您可以使用任意的实数和 $i$ 做线性组合 ，并用它做数学运算： $(3i+2)*(2i+4)=6i^2+12i+4i+8=16i+2$ 。我们同样可以对素数域进行扩域。当我们开始处理更小的字段时，素数域的扩域对于保持安全性变得越来越重要，而 Binius 使用的二进制域及其扩域具有非常好的实用性。
 
 > Modular arithmetic (or **prime fields**) is the most common type of finite field, but there is also another type: **extension fields**. You've probably already seen an extension field before: the complex numbers. We "imagine" a new element, which we label $i$, and declare that it satisfies $i^2=−1$. You can then take any combination of regular numbers and $i$, and do math with it: $(3i+2)*(2i+4)=6i^2+12i+4i+8=16i+2$ . We can similarly take extensions of prime fields. As we start working over fields that are smaller, extensions of prime fields become increasingly important for preserving security, and binary fields (which Binius uses) depend on extensions entirely to have practical utility.
 
-> 补充说明：
-
 ## Recap: arithmetization 
 
-- [ ] TODO
+TODO:
+- [ ] 
 
 > The way that SNARKs and STARKs prove things about computer programs is through **arithmetization**: you convert a statement about a program that you want to prove, into a mathematical equation involving polynomials. A valid solution to the equation corresponds to a valid execution of the program.
 
@@ -127,7 +126,8 @@ $$
 
 > Computers do arithmetic by representing larger numbers as sequences of zeroes and ones, and building "circuits" on top of those bits to compute things like addition and multiplication. Computers are particularly optimized for doing computation with 16-bit, 32-bit and 64-bit integers. Moduluses like $2^{64} - 2^{32} + 1$ and $2^{31} - 1$ are chosen not just because they fit within those bounds, but also because they *align well* with those bounds: you can do multiplication modulo $2^{64} - 2^{32} + 1$ by doing regular 32-bit multiplication, and shift and copy the outputs bitwise in a few places; [this article](https://xn--2-umb.com/22/goldilocks/) explains some of the tricks well.
 >
-> 补充说明：
+> TODO:
+> - [ ] 计算机 word 对齐
 
 > What would be even better, however, is doing computation in binary directly. What if addition could be "just" XOR, with no need to worry about "carrying" the overflow from adding 1 + 1 in one bit position to the next bit position? What if multiplication could be more parallelizable in the same way? And these advantages would all come on top of being able to represent True/False values with just one bit.
 
@@ -303,39 +303,142 @@ $$
 \end{align*}
 $$
 
-You can view what's going on here as a partial evaluation. If we were to multiply the full tensor product $\bigotimes_{i=0}^3(1-r_i,r_i)$ by the full vector of all values, you would get the evaluation $P(1,2,3,4)=-137$ . Here we're multiplying a *partial* tensor product that only uses half the evaluation coordinates, and we're reducing a grid of $N$ values to a row of $\sqrt{N}$ values. If you give this row to someone else, they can use the tensor product of the other half of the evaluation coordinates to complete the rest of the computation.
+你现在可以把这个操作堪称部份求值，如果我们去计算完整的张量积，你就会得到 $P(1,2,3,4)=-137$ ，在这里，我们将仅使用一半坐标的偏张量乘积相乘，并将 N 个值的方阵规约为一行 （ $\sqrt{N}$ 个值）。如果你把此行提供给其他人，他们可以用另一半的求值坐标的张量积来完成剩下的计算。
 
-The prover provides the verifier with this new row, $t'$, as well as the Merkle proofs of some randomly sampled columns. This is $O(\sqrt{N})$ data. In our illustrative example, we'll have the prover provide just the last column; in real life, the prover would need to provide a few dozen columns to achieve adequate security.
+> You can view what's going on here as a partial evaluation. If we were to multiply the full tensor product $\bigotimes_{i=0}^3(1-r_i,r_i)$ by the full vector of all values, you would get the evaluation $P(1,2,3,4)=-137$ . Here we're multiplying a *partial* tensor product that only uses half the evaluation coordinates, and we're reducing a grid of $N$ values to a row of $\sqrt{N}$ values. If you give this row to someone else, they can use the tensor product of the other half of the evaluation coordinates to complete the rest of the computation.
 
-Now, we take advantage of the linearity of Reed-Solomon codes. The key property that we use is: **taking a linear combination of a Reed-Solomon extension gives the same result as a Reed-Solomon extension of a linear combination**. This kind of "order independence" often happens when you have two operations that are both linear.
+P 向 V 提供刚刚计算得出的新行 $t'$ ，同时提供一些随机抽样列的 Merkle 证明。其空间复杂度为 $O(\sqrt{N})$ 。在本例中，我们让 P 只提供最后一列；而在实际应用中，P 需要提供给 V 更多的列来达到更好的安全性。
 
-The verifier does exactly this. They compute the extension of $t'$, and they compute the same linear combination of columns that the prover computed before (but only to the columns provided by the prover), and verify that these two procedures give the same answer.
+> The prover provides the verifier with this new row, $t'$, as well as the Merkle proofs of some randomly sampled columns. This is $O(\sqrt{N})$ data. In our illustrative example, we'll have the prover provide just the last column; in real life, the prover would need to provide a few dozen columns to achieve adequate security.
+> 
+> TODO:
+> - [ ] 实际应用中要提供多少列才能达到安全，如果未提供足量的列会导致什么样的安全问题？
+
+现在，我们利用 Reed-Solomon 的线性特性，其关键是：对 ”Reed-Solomon 扩展做线性组合“的结果等于“对线性组合做Reed-Solomon 扩展”，这种运算顺序的非相关性往往在两个运算都是线性运算时出现。
+
+> Now, we take advantage of the linearity of Reed-Solomon codes. The key property that we use is: **taking a linear combination of a Reed-Solomon extension gives the same result as a Reed-Solomon extension of a linear combination**. This kind of "order independence" often happens when you have two operations that are both linear.
+>
+> 补充：即 $f(g(x)) = g(f(x))$
+
+V 正是这样做的。他们计算了 $t'$ 的扩展，并且用同样的系数对 P 提供的列计算线性组合，并验证这两个过程是否给出相同的答案。
+
+> The verifier does exactly this. They compute the extension of $t'$, and they compute the same linear combination of columns that the prover computed before (but only to the columns provided by the prover), and verify that these two procedures give the same answer.
+>
+> 补充：即我们之前计算出来的 $[6,-9,-8,12]$
 
 ![](https://vitalik.eth.limo/images/binius/basicbinius2.drawio.png)
 
+在本例中，计算 $t'$ 的扩展，和对图中标记的竖列做线性组合，两者给出了相同的答案：-10746。这证明默克尔的根是「善意」构建的 ( 或者至少「足够接近」)，而且它是匹配 t 的：至少绝大多数列是相互兼容的。
 
-In this case, extending $t'$, and computing the same linear combination $([6,-9,-8,12])$ of the column, both give the same answer: $-10746$ . This proves that the Merkle root was constructed "in good faith" (or it at least "close enough"), and it matches $t'$ : at least the great majority of the columns are compatible with each other and with $t'$.
+> In this case, extending $t'$, and computing the same linear combination $([6,-9,-8,12])$ of the column, both give the same answer: $-10746$ . This proves that the Merkle root was constructed "in good faith" (or it at least "close enough"), and it matches $t'$ : at least the great majority of the columns are compatible with each other and with $t'$.
+>
+> TODO:
+> - [ ] 这里和默克尔树的关联还是不够明显
 
-But the verifier still needs to check one more thing: actually check the evaluation of the polynomial at $\{r_0..r_3\}$ . So far, none of the verifier's steps actually depended on the value that the prover claimed. So here is how we do that check. We take the tensor product of what we labelled as the "column part" of the evaluation point:
+到这里 V 还需要再检查一点东西：检查多项式 在 $r = \{r0, \ldots, r3\}$ 的取值。到目前为止，验证者的所有步骤实际上都没有依赖于证明者声称的值。我们是这样检查的。我们对 $t'$ 用前文提到的"column part"张量积的计算结果进行线性组合：
+
+> But the verifier still needs to check one more thing: actually check the evaluation of the polynomial at $\{r_0..r_3\}$ . So far, none of the verifier's steps actually depended on the value that the prover claimed. So here is how we do that check. We take the tensor product of what we labelled as the "column part" of the evaluation point:
 
 $$
 \bigotimes_{i=0}^1(1-r_i,r_i)
 $$
 
-In our example, where $r=\{1,2,3,4\}$ (so the half that chooses the column is $\{1, 2\}$ ), this equals:
+在我们的例子中，我们取 r 的前半部份，即 $\{1, 2\}$ ，有：
+
+> In our example, where $r=\{1,2,3,4\}$ (so the half that chooses the column is $\{1, 2\}$ ), this equals:
 
 $$
 [(1-1)\times (1-2),1\times (1-2),(1-1)\times 2,1\times 2]=[0,-1,0,2]
 $$
 
-So now we take this linear combination of $t'$ :
+然后我们用刚才计算出来的结果计算 $t'$ 的线性组合
+> So now we take this linear combination of $t'$ :
 
 $$
 0\times 41+(-1)\times (-15)+0\times 74+2\times (-76)=-137
 $$
 
-Which exactly equals the answer you get if you evaluate the polynomial directly.
+这和你直接把 $r=\{1,2,3,4\}$ 带入到多项式后计算出来的结果是一致的。
 
-The above is pretty close to a complete description of the "simple" Binius protocol. This already has some interesting advantages: for example, because the data is split into rows and columns, you only need a field half the size. But this doesn't come close to realizing the full benefits of doing computation in binary. For this, we will need the full Binius protocol. But first, let's get a deeper understanding of binary fields.
+> Which exactly equals the answer you get if you evaluate the polynomial directly.
+>
+> TODO:
+> - [ ] “选择 r 中的一半进行线性组合”，找一下这个方法在论文中的解释和证明。
+
+以上内容是一个 简化 Binius 协议的完整描述。目前我们能发现一些有趣的优点：例如，由于数据被分成行和列，因此你只需要一个一半大小的域。但是用二进制域进行计算的好处不止于此。为此，我们需要完整的 Binius 协议。但首先，让我们更深入地了解二进制域。
+
+> The above is pretty close to a complete description of the "simple" Binius protocol. This already has some interesting advantages: for example, because the data is split into rows and columns, you only need a field half the size. But this doesn't come close to realizing the full benefits of doing computation in binary. For this, we will need the full Binius protocol. But first, let's get a deeper understanding of binary fields.
 
 ## Binary fields
+
+最小的有限域是模为 2 的有限域，用 $F_2$ 表示，这是在 $F_2$ 上的加法和乘法表：
+
+> The smallest possible field is arithmetic modulo 2, which is so small that we can write out its addition and multiplication tables:
+
+|**+**|**0**|**1**|     |**\***|**0**|**1**|
+|---- |---- |---- |---- |----  |---- |---- |
+|**0**|0    |1    |     |**0** |0    |0    |
+|**1**|1    |0    |     |**1** |0    |1    |
+
+We can make larger binary fields by taking extensions: if we start with �2 (integers modulo 2) and then define � where �2=�+1, we get the following addition and multiplication tables:
+
+|**+**  |**0**|**1**|**x**|**x+1**| |**\*** |**0**|**1**|**x**|**x+1**|
+|----   |---- |---- |---- |----   |-|----   |---- |---- |---- |----   |
+|**0**  |0    |1    |x    |x+1    | |**0**  |0    |0    |0    |0      |
+|**1**  |1    |0    |x+1  |x      | |**1**  |0    |1    |x    |x+1    |
+|**x**  |x    |x+1  |0    |1      | |**x**  |0    |x    |x+1  |1      |
+|**x+1**|x+1  |x    |1    |0      | |**x+1**|0    |x+1  |1    |x      |
+
+It turns out that we can expand the binary field to arbitrarily large sizes by repeating this construction. Unlike with complex numbers over reals, where you can add *one* new element $i$, but you can't add any more ([quaternions](https://en.wikipedia.org/wiki/Quaternion) do exist, but they're mathematically weird, eg. $ab\neq ba$ ), with finite fields you can keep adding new extensions forever. Specifically, we define elements as follows:
+
+- $x_0$ satisfies $x_0^2=x_0+1$
+- $x_1$ satisfies $x_1^2=x_0x_1+1$
+- $x_2$ satisfies $x_2^2=x_1x_2+1$
+- $x_3$ satisfies $x_3^2=x_3x_2+1$
+
+TODO:
+- [ ] 这里为什么可以表示一个之前域不存在的数
+
+And so on. This is often called the **tower construction**, because of how each successive extension can be viewed as adding a new layer to a tower. This is not the only way to construct binary fields of arbitary size, but it has some unique advantages that Binius takes advantage of.
+
+We can represent these numbers as a list of bits, eg. $1100101010001111$. The first bit represents multiples of 1, the second bit represents multiples of $x_0$ , then subsequent bits represent multiples of: $x_1, x_1 \times x_0, x_2, x_2 \times x_0$ , and so forth. This encoding is nice because you can decompose it:
+
+$$
+1100101010001111=11001010+10001111*x_3\\=1100+1010*x_2+1000*x_3+1111*x_2x_3\\=11+10*x_2+10*x_2x_1+10*x_3+11*x_2x_3+11*x_1x_2x_3\\=1+x_0+x_2+x_2x_1+x_3+x_2x_3+x_0x_2x_3+x_1x_2x_3+x_0x_1x_2x_3
+$$
+
+This is a relatively uncommon notation, but I like representing binary field elements as integers, taking the bit representation where more-significant bits are to the right. That is, $1=1, x_0=01=2,1+x_0=11=3,1+x_0+x_2=11001000=19$ , and so forth. $1100101010001111$ is, in this representation, $61779$.
+
+Addition in binary fields is just XOR (and, incidentally, so is subtraction); note that this implies that $x+x=0$ for any $x$ . To multiply two elements $x \times y$, there's a pretty simple recursive algorithm: split each number into two halves:
+
+$$
+x=L_x+R_x*x_k~y=L_y+R_y*x_k
+$$
+
+Then, split up the multiplication:
+
+$$
+x*y=(L_x*L_y)+(L_x*R_y)*x_k+(R_x*L_y)*x_k+(R_x*R_y)*x_k^2
+$$
+
+The last piece is the only slightly tricky one, because you have to apply the reduction rule, and replace $R_x*R_y*x_k^2$ with $R_x*R_y*(x_{k-1}*x_k+1)$ . There are more efficient ways to do multiplication, analogues of the [Karatsuba algorithm](https://en.wikipedia.org/wiki/Karatsuba_algorithm) and [fast Fourier transforms](https://vitalik.eth.limo/general/2019/05/12/fft.html), but I will leave it as an exercise to the interested reader to figure those out.
+
+Division in binary fields is done by combining multiplication and inversion: $\frac35=3 \times \frac15$ . The "simple but slow" way to do inversion is an application of [generalized Fermat's little theorem](https://planetmath.org/fermatslittletheorem): $\frac1x=x^{2^{2^k}-2}$ for any $k$ where $2^{2^k}>x$ . In this case, $\frac15=5^{14}=14$ , and so $\frac35=3*14=9$ . There is also a more complicated but more efficient inversion algorithm, which you can find [here](https://ieeexplore.ieee.org/document/612935). You can use [the code here](https://github.com/ethereum/research/blob/master/binius/binary_fields.py) to play around with binary field addition, multiplication and division yourself.
+
+![img](https://vitalik.eth.limo/images/binius/additiontable.png) ![img](https://vitalik.eth.limo/images/binius/multiplicationtable.png)
+
+*Left: addition table for four-bit binary field elements (ie. elements made up only of combinations of $1\text{,}x_0\text{,}x_1\text{ and }x_0x_1$). Right: multiplication table for four-bit binary field elements.*
+
+
+
+The beautiful thing about this type of binary field is that it combines some of the best parts of "regular" integers and modular arithmetic. Like regular integers, binary field elements are unbounded: you can keep extending as far as you want. But like modular arithmetic, if you do operations over values within a certain size limit, all of your answers also stay within the same bound. For example, if you take successive powers of $42$, you get:
+
+$1,42,199,215,245,249,180,91, \ldots$
+
+And after $255$ steps, you get right back to $42^{255}=1$. And like *both* regular integers and modular arithmetic, they obey the usual laws of mathematics: $a \times b=b \times a,a \times (b+c)=a \times b+a \times c$, and even some strange new laws, eg. $a^2+b^2=(a+b)^2$ (the usual $2ab$ term is missing, because in a binary field, $1+1=0$).
+
+And finally, binary fields work conveniently with bits: if you do math with numbers that fit into $2^k$ bits, then all of your outputs will also fit into $2^k$ bits. This avoids awkwardness like eg. with Ethereum's [EIP-4844](https://www.eip4844.com/), where the individual "chunks" of a blob have to be numbers modulo `52435875175126190479447740508185965837690552500527637822603658699938581184513`, and so encoding binary data involves throwing away a bit of space and doing extra checks at the application layer to make sure that each element is storing a value less than  $2^{248}$ . It also means that binary field arithmetic is *super* fast on computers - both CPUs, and theoretically optimal FPGA and ASIC designs.
+
+This all means that we can do things like the Reed-Solomon encoding that we did above, in a way that completely avoids integers "blowing up" like we saw in our example, and in a way that is extremely "native" to the kind of calculation that computers are good at. The "splitting" property of binary fields - how we were able to do $1100101010001111=11001010+10001111*x_3$ , and then keep splitting as little or as much as we wanted, is also crucial for enabling a lot of flexibility.
+
+## Full Binius
