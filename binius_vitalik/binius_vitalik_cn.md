@@ -238,6 +238,8 @@ FIXME: "database lookup"
 假设我们选取随机点 $r=\{1,2,3,4\}$ (多项式在该点的取值为 -137，可以用[这里的代码](https://github.com/ethereum/research/blob/master/binius/utils.py#L100)进行确认)。现在让我们来看一下 Proof 的生成过程，我们把 $r$ 分解成两个部份：第一个部份是 $\{1,2\}$ 表示对一个行中的列元素做线性组合，第二个部份 $\{3,4\}$ 表示对行做线性组合，
 
 > Suppose we pick $r=\{1,2,3,4\}$ (the polynomial, at this point, evaluates to −137; you can confirm it [with this code](https://github.com/ethereum/research/blob/master/binius/utils.py#L100)). Now, we get into the process of actually making the proof. We split up $r$ into two parts: the first part $\{1,2\}$ representing a linear combination of *columns within a row*, and the second part $\{3,4\}$ representing a linear combination *of rows*. 
+>
+> 补充：这里的多项式指的是用本小节用的 Hypercube 上的点和其对应值计算出来的 MLE ，因为这个 Hypercube 是4维的，所以上面有16个点，对应着一个 4 变量多项式，$P(x_1, x_2, x_3, x_4)$
 
 我们对列的计算其张量积
 
@@ -255,7 +257,7 @@ $$
 \bigotimes_{i=2}^3(1-r_i,r_i)
 $$
 
-上诉的计算意味着：取每一个集合中的元素相乘，并把所有的结果给写出来
+张量积意味着：取每一个集合中的元素相乘，并把所有的结果给写出来
 
 > What this means is: a list of all possible products of one value from each set.
 
@@ -267,36 +269,19 @@ $$
 [(1-r_2)\times (1-r_3),r_2\times (1-r_3),(1-r_2)\times r_3,r_2\times r_3]
 $$
 
-> 补充：
-> Binius 中张量积  $\bigotimes_{i=0}^{\nu-1}(1-r_i,r_i)$  的定义：
-> 
-> 域 $K^v$ 上的随机点表示为 $r := (r_0, r_1, \ldots, r_i, \ldots, r_{ν−1}) \in K^v, r_i \in K$, 
-> 
->  $B^v$ 是 v-demotion-Hypercube 上所有的点（共计 $2^v$ 个）构成的集合。
-> 
->  $b_k$ 表示 $B^v$ 中的元素， $b_k := (v_0, v_1, \ldots, v_i, \ldots, v_v), v_i \in \{0, 1\}$  。
->  
-> $\widetilde{\textbf{eq}}$ 是计算 MLE 时用到的算式，在 MLE 中起到了一个选择器的效果，定义如下
+> 补充：先不要去管左边的 $\bigotimes$ 符号，把目光放在 $(1-r_i,r_i)$ 上，代入 $i$ 所有可能的取值 $i = 2, 3$ ，我们得到两个数对 $(1 - r_2, r_2),(1 - r_3, r_3)$ ，然后我们取第一个数对中的元素和第二个数对中的元素，并把它们乘起来，有：
 >
-> $$
-> \begin{aligned}
-> \widetilde{\textbf{eq}}(X_0,\ldots,X_{\nu-1},Y_0,\ldots,Y_{\nu-1}) &= \
-> \prod_{i=0}^{\nu-1}X_i\cdot Y_i+(1-X_i)\cdot(1-Y_i)
-> \end{aligned}
-> $$
->
-> 然后我们对 $B_v$ 中的每个点 $b_k$ ，计算 $\widetilde{\mathsf{eq}}(b_k,r)$ ，得到 $2^v$ 个结果
+> $(1 - r_2) \times (1 - r_3)$
 > 
-> $$
-> \begin{aligned}
-> &\bigotimes_{i=0}^{\nu-1}(1-r_i,r_i) := {\left( \widetilde{\textbf{eq}}(b_k, r)\right) }\_{b_k\in\mathcal{B}\_\nu} \\
-> =& \underbrace{ ( \widetilde{\textbf{eq}}(b_0, r), \widetilde{\textbf{eq}}(b_1, r), \ldots, \widetilde{\textbf{eq}}(b_{k}, r), \ldots) }\_\text{ count = $2^v$ }\\
-> =& \underbrace{ ( \prod_{i=0}^{\nu-1}b_{0_i}\cdot r_i+(1-b_{0_i})\cdot(1-r_i), \prod_{i=0}^{\nu-1}b_{1_i}\cdot r_i+(1-b_{1_i})\cdot(1-r_i), \ldots, \prod_{i=0}^{\nu-1}b_{k_i}\cdot r_i+(1-b_{k_i})\cdot(1-r_i), \ldots ) }\_\text{ count = $2^v$ }\\
-> =& \underbrace{ (1-r_0) \cdot\cdots\cdot (1-r_{\nu-1}), \ldots , r_0 \cdot\cdots\cdot r_{\nu-1}) }_\text{ count = $2^v$ }
-> \end{aligned}
-> $$
+> $r_2 \times (1 - r_3)$
+> 
+> $(1 - r_2) \times r_3$
+> 
+> $r_2 \times r_3$
+>
+> 把上面得出的四个结果写到一个列表里面，我们就得到了上面的式子 
 
-使用  $r={1,2,3,4}$  ，在行的情形下，我们取 $r_2 = 3$ and $r_3 = 4$ ：
+使用  $r={1,2,3,4}$  ，取 $r_2 = 3$ and $r_3 = 4$ ：
 
 > Using $r={1,2,3,4}$ (so $r_2 = 3$ and $r_3 = 4$):
 
