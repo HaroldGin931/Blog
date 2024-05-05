@@ -40,18 +40,20 @@
 > We redefine:
 
 $$
-x + y => (x + y) \% p \\
-x * y => (x * y) \% p \\
-x^y => (x^y) \% p \\
-x - y => (x - y) \% p \\
-x/y => (x * y^{p-2}) \% p
+\begin{align*}
+x + y =>& (x + y) \% p \\
+x \times y =>& (x \times y) \% p \\
+x^y =>& (x^y) \% p \\
+x - y =>& (x - y) \% p \\
+x/y =>& (x \times y^{p-2}) \% p
+\end{align*}
 $$
 
 上面的规则都是自洽的， 例如，我们取 $p=7$，则：
 - $5 + 3 = 1$ (because $8 \% 7 = 1$)
 - $1 - 3 = 5$ (because $-2 \% 7 = 5$)
-- $2 * 5 = 3$ (because $10 \% 7 = 3$)
-- $3/5 = 2$ (because $(3*5^5) \% 7 = 9375 \%7 = 2$)
+- $2 \times 5 = 3$ (because $10 \% 7 = 3$)
+- $3/5 = 2$ (because $(3 \times 5^5) \% 7 = 9375 \%7 = 2$)
 
 这种结构的一个更一般的术语是有限域。有限域是一种数学结构，它遵循上述的算术法则，但是可能的计算结果是有限的，因此每一种可能的输出都可以用固定的长度来表示。
 
@@ -59,9 +61,9 @@ $$
 >
 > 进一步解释：有限域是一种数学结构，其包含了有限个元素，域中的元素能够进行加减乘除的运算，且计算后的结果仍是属于这个有限域，因此有限域中的每个元素都可以用固定长度表示。有限域最常见的例子是 modulus $p$ 为素数。我们依然用 modulus = 7 举例，有限域 $F_7$ 包含的元素有 $\{0, 1, 2, 3, 4, 5, 6\}$, 这个域中的每一个元素都是整数，在这个域中任取两个元素进行计算后的结果仍然属于这个域。
 
-模算术（或素数域）是最常见的有限域类型，但也有另一种类型：扩域。您之前可能已经看过一个扩域：复数。我们“想象”一个新元素，我们用 $i$ 表示 ，并声明它满足 $i^2=−1$。然后，您可以使用任意的实数和 $i$ 做线性组合 ，并用它做数学运算：$(3i+2)*(2i+4)=6i^2+12i+4i+8=16i+2$。我们同样可以对素数域进行扩域。当我们开始处理更小的字段时，素数域的扩域对于保持安全性变得越来越重要，而 Binius 使用的二进制域及其扩域具有非常好的实用性。
+模算术（或素数域）是最常见的有限域类型，但也有另一种类型：扩域。您之前可能已经看过一个扩域：复数。我们“想象”一个新元素，我们用 $i$ 表示 ，并声明它满足 $i^2=−1$。然后，您可以使用任意的实数和 $i$ 做线性组合 ，并用它做数学运算： $(3i+2)*(2i+4)=6i^2+12i+4i+8=16i+2$ 。我们同样可以对素数域进行扩域。当我们开始处理更小的字段时，素数域的扩域对于保持安全性变得越来越重要，而 Binius 使用的二进制域及其扩域具有非常好的实用性。
 
-> Modular arithmetic (or **prime fields**) is the most common type of finite field, but there is also another type: **extension fields**. You've probably already seen an extension field before: the complex numbers. We "imagine" a new element, which we label $i$, and declare that it satisfies $i^2=−1$. You can then take any combination of regular numbers and $i$, and do math with it: $(3i+2)*(2i+4)=6i^2+12i+4i+8=16i+2$. We can similarly take extensions of prime fields. As we start working over fields that are smaller, extensions of prime fields become increasingly important for preserving security, and binary fields (which Binius uses) depend on extensions entirely to have practical utility.
+> Modular arithmetic (or **prime fields**) is the most common type of finite field, but there is also another type: **extension fields**. You've probably already seen an extension field before: the complex numbers. We "imagine" a new element, which we label $i$, and declare that it satisfies $i^2=−1$. You can then take any combination of regular numbers and $i$, and do math with it: $(3i+2)*(2i+4)=6i^2+12i+4i+8=16i+2$ . We can similarly take extensions of prime fields. As we start working over fields that are smaller, extensions of prime fields become increasingly important for preserving security, and binary fields (which Binius uses) depend on extensions entirely to have practical utility.
 
 > 补充说明：
 
@@ -71,7 +73,7 @@ $$
 
 > The way that SNARKs and STARKs prove things about computer programs is through **arithmetization**: you convert a statement about a program that you want to prove, into a mathematical equation involving polynomials. A valid solution to the equation corresponds to a valid execution of the program.
 
-> To give a simple example, suppose that I computed the 100'th Fibonacci number, and I want to prove to you what it is. I create a polynomial $F$ that encodes Fibonacci numbers: so $F(0)=F(1)=1,F(2)=2,F(3)=3,F(4)=5,$ and so on for 100 steps. The condition that I need to prove is that $F(x+2)=F(x)+F(x+1)$ across the range $x=\{0,1 \ldots 98\}$. I can convince you of this by giving you the quotient:
+> To give a simple example, suppose that I computed the 100'th Fibonacci number, and I want to prove to you what it is. I create a polynomial $F$ that encodes Fibonacci numbers: so $F(0)=F(1)=1,F(2)=2,F(3)=3,F(4)=5$, and so on for 100 steps. The condition that I need to prove is that $F(x+2)=F(x)+F(x+1)$ across the range $x=\{0,1 \ldots 98\}$. I can convince you of this by giving you the quotient:
 
 $$
 H(x)=\frac{F(x+2)-F(x+1)-F(x)}{Z(x)}
@@ -107,11 +109,11 @@ $$
 
 ![](https://vitalik.eth.limo/images/binius/rs_example.png)
 
-*一些多项式求值的 Reed-Solomon 扩展。即使原始值很小，额外的值也会放大到字段的完整大小（在本例中为 $2^{31}-1$ ）。
+一些多项式求值的 Reed-Solomon 扩展。即使原始值很小，额外的值也会放大到字段的完整大小（在本例中为 $2^{31}-1$ ）。
 
 > A Reed-Solomon extension of some polynomial evaluations. Even though the original values are small, the extra values all blow up to the full size of the field (in this case $2^{31} - 1$).
 
-2022 年，Plonky2 发布。Plonky2 的主要创新是将算术模数计算为较小的素数：$2^{64}-2^{32}+1=18446744069414584321$ 。现在，每次加法或乘法都可以在 CPU 上只需几条指令即可完成，并且将所有数据哈希在一起的速度比以前快 4 倍。但这有一个问题：这种方法是 STARK 独有的。如果您尝试使用具有如此小尺寸的椭圆曲线的 SNARK，则椭圆曲线会变得不安全。
+2022 年，Plonky2 发布。Plonky2 的主要创新是将算术模数计算为较小的素数： $2^{64}-2^{32}+1=18446744069414584321$  。现在，每次加法或乘法都可以在 CPU 上只需几条指令即可完成，并且将所有数据哈希在一起的速度比以前快 4 倍。但这有一个问题：这种方法是 STARK 独有的。如果您尝试使用具有如此小尺寸的椭圆曲线的 SNARK，则椭圆曲线会变得不安全。
 
 > In 2022, Plonky2 was released. Plonky2's main innovation was doing arithmetic modulo a smaller prime: $2^{64}-2^{32}+1=18446744069414584321$. Now, each addition or multiplication can always be done in just a few instructions on a CPU, and hashing all of the data together is 4x faster than before. But this comes with a catch: this approach is STARK-only. If you try to use a SNARK, with an elliptic curve of such a small size, the elliptic curve becomes insecure.
 
@@ -233,36 +235,87 @@ FIXME: "database lookup"
 
 > Now, let's suppose that the prover wants to prove an evaluation of this polynomial at some point $r = (r_0, r_1, r_2, r_3)$. There is one nuance in Binius that makes it somewhat weaker than other polynomial commitment schemes: the prover should not know, or be able to guess, $s$, until after they committed to the Merkle root (in other words, $r$ should be a pseudo-random value that depends on the Merkle root). This makes the scheme useless for "database lookup" (eg. "ok you gave me the Merkle root, now prove to me $P(0, 0, 1, 0)$ !"). But the actual zero-knowledge proof protocols that we use generally don't need "database lookup"; they simply need to check the polynomial at a random evaluation point. Hence, this restriction is okay for our purposes.
 
-Suppose we pick $r=\{1,2,3,4\}$ (the polynomial, at this point, evaluates to −137; you can confirm it [with this code](https://github.com/ethereum/research/blob/master/binius/utils.py#L100)). Now, we get into the process of actually making the proof. We split up $r$ into two parts: the first part $\{1,2\}$ representing a linear combination of *columns within a row*, and the second part $\{3,4\}$ representing a linear combination *of rows*. We compute a "tensor product", both for the column part:
+假设我们选取随机点 $r=\{1,2,3,4\}$ (多项式在该点的取值为 -137，可以用[这里的代码](https://github.com/ethereum/research/blob/master/binius/utils.py#L100)进行确认)。现在让我们来看一下 Proof 的生成过程，我们把 $r$ 分解成两个部份：第一个部份是 $\{1,2\}$ 表示对一个行中的列元素做线性组合，第二个部份 $\{3,4\}$ 表示对行做线性组合，
+
+> Suppose we pick $r=\{1,2,3,4\}$ (the polynomial, at this point, evaluates to −137; you can confirm it [with this code](https://github.com/ethereum/research/blob/master/binius/utils.py#L100)). Now, we get into the process of actually making the proof. We split up $r$ into two parts: the first part $\{1,2\}$ representing a linear combination of *columns within a row*, and the second part $\{3,4\}$ representing a linear combination *of rows*. 
+
+我们对列的计算其张量积
+
+> We compute a "tensor product", both for the column part:
 
 $$
 \bigotimes_{i=0}^1(1-r_i,r_i)
 $$
 
-And for the row part:
+对于行的部份
+
+> And for the row part:
 
 $$
 \bigotimes_{i=2}^3(1-r_i,r_i)
 $$
 
-What this means is: a list of all possible products of one value from each set. In the row case, we get:
-$$
-[(1-r_2)*(1-r_3),r_2*(1-r_3),(1-r_2)*r_3,r_2*r_3]
-$$
+上诉的计算意味着：取每一个集合中的元素相乘，并把所有的结果给写出来
 
-Using $r={1,2,3,4}$ (so $r_2 = 3$ and $r_3 = 4$):
-$$
-[(1-3)*(1-4),3*(1-4),(1-3)*4,3*4]=[6,-9,-8,12]
-$$
+> What this means is: a list of all possible products of one value from each set.
 
-Now, we compute a new "row" $t'$, by taking this linear combination of the existing rows. That is, we take:
+，在行的情形中，我们有：
+
+> In the row case, we get:
 
 $$
-[3,1,4,1]*6+\\
-[5,9,2,6]*(-9)+\\
-[5,3,5,8]*(-8)+\\
-[9,7,9,3]*12=\\
-[41,-15,74,-76]
+[(1-r_2)\times (1-r_3),r_2\times (1-r_3),(1-r_2)\times r_3,r_2\times r_3]
+$$
+
+> 补充：
+> Binius 中张量积  $\bigotimes_{i=0}^{\nu-1}(1-r_i,r_i)$  的定义：
+> 
+> 域 $K^v$ 上的随机点表示为 $r := (r_0, r_1, \ldots, r_i, \ldots, r_{ν−1}) \in K^v, r_i \in K$, 
+> 
+>  $B^v$ 是 v-demotion-Hypercube 上所有的点（共计 $2^v$ 个）构成的集合。
+> 
+>  $b_k$ 表示 $B^v$ 中的元素， $b_k := (v_0, v_1, \ldots, v_i, \ldots, v_v), v_i \in \{0, 1\}$  。
+>  
+> $\widetilde{\textbf{eq}}$ 是计算 MLE 时用到的算式，在 MLE 中起到了一个选择器的效果，定义如下
+>
+> $$
+> \begin{aligned}
+> \widetilde{\textbf{eq}}(X_0,\ldots,X_{\nu-1},Y_0,\ldots,Y_{\nu-1}) &= \
+> \prod_{i=0}^{\nu-1}X_i\cdot Y_i+(1-X_i)\cdot(1-Y_i)
+> \end{aligned}
+> $$
+>
+> 然后我们对 $B_v$ 中的每个点 $b_k$ ，计算 $\widetilde{\mathsf{eq}}(b_k,r)$ ，得到 $2^v$ 个结果
+> 
+> $$
+> \begin{aligned}
+> &\bigotimes_{i=0}^{\nu-1}(1-r_i,r_i) := {\left( \widetilde{\textbf{eq}}(b_k, r)\right) }\_{b_k\in\mathcal{B}\_\nu} \\
+> =& \underbrace{ ( \widetilde{\textbf{eq}}(b_0, r), \widetilde{\textbf{eq}}(b_1, r), \ldots, \widetilde{\textbf{eq}}(b_{k}, r), \ldots) }\_\text{ count = $2^v$ }\\
+> =& \underbrace{ ( \prod_{i=0}^{\nu-1}b_{0_i}\cdot r_i+(1-b_{0_i})\cdot(1-r_i), \prod_{i=0}^{\nu-1}b_{1_i}\cdot r_i+(1-b_{1_i})\cdot(1-r_i), \ldots, \prod_{i=0}^{\nu-1}b_{k_i}\cdot r_i+(1-b_{k_i})\cdot(1-r_i), \ldots ) }\_\text{ count = $2^v$ }\\
+> =& \underbrace{ (1-r_0) \cdot\cdots\cdot (1-r_{\nu-1}), \ldots , r_0 \cdot\cdots\cdot r_{\nu-1}) }_\text{ count = $2^v$ }
+> \end{aligned}
+> $$
+
+使用  $r={1,2,3,4}$  ，在行的情形下，我们取 $r_2 = 3$ and $r_3 = 4$ ：
+
+> Using $r={1,2,3,4}$ (so $r_2 = 3$ and $r_3 = 4$):
+
+$$
+[(1-3)\times (1-4),3\times (1-4),(1-3)\times 4,3\times 4]=[6,-9,-8,12]
+$$
+
+现在 通过对现有的行计算其线性组合，我们得到了一个新行 $t'$ ：
+
+> Now, we compute a new "row" $t'$, by taking this linear combination of the existing rows. That is, we take:
+
+$$
+\begin{align*}
+[&3,1,4,1] \times 6 +\\
+[&5,9,2,6] \times (-9) +\\
+[&5,3,5,8] \times (-8) +\\
+[&9,7,9,3] \times 12 =\\
+[&41,-15,74,-76]
+\end{align*}
 $$
 
 You can view what's going on here as a partial evaluation. If we were to multiply the full tensor product $\bigotimes_{i=0}^3(1-r_i,r_i)$ by the full vector of all values, you would get the evaluation $P(1,2,3,4)=-137$ . Here we're multiplying a *partial* tensor product that only uses half the evaluation coordinates, and we're reducing a grid of $N$ values to a row of $\sqrt{N}$ values. If you give this row to someone else, they can use the tensor product of the other half of the evaluation coordinates to complete the rest of the computation.
@@ -287,13 +340,13 @@ $$
 In our example, where $r=\{1,2,3,4\}$ (so the half that chooses the column is $\{1, 2\}$ ), this equals:
 
 $$
-[(1-1)*(1-2),1*(1-2),(1-1)*2,1*2]=[0,-1,0,2]
+[(1-1)\times (1-2),1\times (1-2),(1-1)\times 2,1\times 2]=[0,-1,0,2]
 $$
 
 So now we take this linear combination of $t'$ :
 
 $$
-0*41+(-1)*(-15)+0*74+2*(-76)=-137
+0\times 41+(-1)\times (-15)+0\times 74+2\times (-76)=-137
 $$
 
 Which exactly equals the answer you get if you evaluate the polynomial directly.
