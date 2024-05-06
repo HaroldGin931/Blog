@@ -41,11 +41,11 @@
 
 $$
 \begin{align*}
-x + y =>& (x + y) \% p \\
-x \times y =>& (x \times y) \% p \\
-x^y =>& (x^y) \% p \\
-x - y =>& (x - y) \% p \\
-x/y =>& (x \times y^{p-2}) \% p
+x + y =>& (x + y)\mod p \\
+x \times y =>& (x \times y)\mod p \\
+x^y =>& (x^y)\mod p \\
+x - y =>& (x - y)\mod p \\
+x/y =>& (x \times y^{p-2})\mod p
 \end{align*}
 $$
 
