@@ -380,7 +380,9 @@ $$
 |**0**|0    |1    |     |**0** |0    |0    |
 |**1**|1    |0    |     |**1** |0    |1    |
 
-We can make larger binary fields by taking extensions: if we start with $F_2$ (integers modulo 2) and then define $x$ where $x^2=x+1$, we get the following addition and multiplication tables:
+通过扩展，我们能够得到一个更大的二进制域：我们对 $F_2$ （模为 2）进行扩域，定义 $x$ ,  其是方程 $x^2=x+1$ 的根，我们可以得到如下的加法乘法表
+
+> We can make larger binary fields by taking extensions: if we start with $F_2$ (integers modulo 2) and then define $x$ where $x^2=x+1$, we get the following addition and multiplication tables:
 
 |**+**  |**0**|**1**|**x**|**x+1**| |**\*** |**0**|**1**|**x**|**x+1**|
 |----   |---- |---- |---- |----   |-|----   |---- |---- |---- |----   |
@@ -389,26 +391,42 @@ We can make larger binary fields by taking extensions: if we start with $F_2$ (i
 |**x**  |x    |x+1  |0    |1      | |**x**  |0    |x    |x+1  |1      |
 |**x+1**|x+1  |x    |1    |0      | |**x+1**|0    |x+1  |1    |x      |
 
-It turns out that we can expand the binary field to arbitrarily large sizes by repeating this construction. Unlike with complex numbers over reals, where you can add *one* new element $i$, but you can't add any more ([quaternions](https://en.wikipedia.org/wiki/Quaternion) do exist, but they're mathematically weird, eg. $ab\neq ba$ ), with finite fields you can keep adding new extensions forever. Specifically, we define elements as follows:
+通过反复使用上述的技巧，我们可以把一个二进制域扩展到任意大的域。与实数域扩展到负数域不同，在引入虚数 $i$ 之后，你便不能再添加新的元素到复数域中（当然四元数是一个复数的扩域，不过其不满足交换率）。在有限域的的情形中，你总是能进行扩域的操作，每次扩域时，我们使用如下定义的元素。
+
+> It turns out that we can expand the binary field to arbitrarily large sizes by repeating this construction. Unlike with complex numbers over reals, where you can add *one* new element $i$, but you can't add any more ([quaternions](https://en.wikipedia.org/wiki/Quaternion) do exist, but they're mathematically weird, eg. $ab\neq ba$ ), with finite fields you can keep adding new extensions forever. Specifically, we define elements as follows:
 
 - $x_0$ satisfies $x_0^2=x_0+1$
 - $x_1$ satisfies $x_1^2=x_0x_1+1$
 - $x_2$ satisfies $x_2^2=x_1x_2+1$
 - $x_3$ satisfies $x_3^2=x_3x_2+1$
 
-TODO:
-- [ ] 这里为什么可以表示一个之前域不存在的数
+> 补充： 
+> - $x_0^2=x_0+1$ 的解在 $F_2$ 上不存在，通过把这个解添加到 $F_2$ 中，该方程变得有解，域则因为添加操作而变成了一个新的更大的域，此时一次扩域完成。
+> - - [ ] $x_1, x_2, \ldots$ 像上面这样定义的原因
+> - Vitalik 这里指的是，复数域是最大的代数域，你无法再通过代数扩张的方式得到一个比复数域还要大的域，且四元数不在我们讨论的范围内
+> - 实数域，复数域的元素有无穷多个，是无限域
+> - 扩域：通过对原有域中引入一个新的元素，并将这个元素和原域中的所有元素做线性组合，所得出的全部结果就是这个扩域后的全部域元素，
+> - 以 $F_2$ 到 $F_{2^2}$ 的扩域为例，当扩域只引入了一个元素时，你可以把原域的元素铺成一个横轴和一个纵轴，如下表左侧，然后对纵轴上的每个数字都乘上被引入的新元素（如右侧）得到的值再和横轴的数字做加法，即可得到 $F_{2^2}$ 中的全部元素
+> 
+> > | $F_2$ | $0$     | $1$     |   | $F_{2^2}$      | $0$                | $1$                |
+> > | ---   |---      |---      |---|---             |---                 |---                 |
+> > | $0$   | $(0,0)$ | $(0,1)$ |==>| $0 \times x_0$ | $0 \times x_0 + 0$ | $0 \times x_0 + 1$ |
+> > | $1$   | $(1,0)$ | $(1,1)$ |   | $1 \times x_0$ | $1 \times x_0 + 0$ | $1 \times x_0 + 1$ |
 
-And so on. This is often called the **tower construction**, because of how each successive extension can be viewed as adding a new layer to a tower. This is not the only way to construct binary fields of arbitary size, but it has some unique advantages that Binius takes advantage of.
+以此类推，这个扩域方式通常被叫做塔结构，因为每一次扩域就像是给这个塔加了新的一层一半，这当然不是唯一的二进制扩域形式，但是塔结构有着自己独到的优点，Binius 正是利用到了这些点
 
-We can represent these numbers as a list of bits, eg. $1100101010001111$. The first bit represents multiples of 1, the second bit represents multiples of $x_0$ , then subsequent bits represent multiples of: $x_1, x_1 \times x_0, x_2, x_2 \times x_0$ , and so forth. This encoding is nice because you can decompose it:
+> And so on. This is often called the **tower construction**, because of how each successive extension can be viewed as adding a new layer to a tower. This is not the only way to construct binary fields of arbitary size, but it has some unique advantages that Binius takes advantage of.
+
+我们可以用 bit 来表示这些数字 $1100101010001111$ 。第一位表示
+
+> We can represent these numbers as a list of bits, eg. $1100101010001111$. The first bit represents multiples of 1, the second bit represents multiples of $x_0$ , then subsequent bits represent multiples of: $x_1, x_1 \times x_0, x_2, x_2 \times x_0$ , and so forth. This encoding is nice because you can decompose it:
 
 $$
-\begin{align}
+\begin{align*}
 1100101010001111=11001010+10001111 \times x_3 =1100+1010  \times x_2+1000 \times x_3+1111 \times x_2x_3 \\
 =11+10 \times x_2+10 \times x_2x_1+10 \times x_3+11 \times x_2x_3+11 \times x_1x_2x_3\\
 =1+x_0+x_2+x_2x_1+x_3+x_2x_3+x_0x_2x_3+x_1x_2x_3+x_0x_1x_2x_3
-\end{align}
+\end{align*}
 $$
 
 This is a relatively uncommon notation, but I like representing binary field elements as integers, taking the bit representation where more-significant bits are to the right. That is, $1=1, x_0=01=2,1+x_0=11=3,1+x_0+x_2=11001000=19$ , and so forth. $1100101010001111$ is, in this representation, $61779$.
@@ -433,8 +451,6 @@ Division in binary fields is done by combining multiplication and inversion: $\f
 
 *Left: addition table for four-bit binary field elements (ie. elements made up only of combinations of $1\text{,}x_0\text{,}x_1\text{ and }x_0x_1$). Right: multiplication table for four-bit binary field elements.*
 
-
-
 The beautiful thing about this type of binary field is that it combines some of the best parts of "regular" integers and modular arithmetic. Like regular integers, binary field elements are unbounded: you can keep extending as far as you want. But like modular arithmetic, if you do operations over values within a certain size limit, all of your answers also stay within the same bound. For example, if you take successive powers of $42$, you get:
 
 $1,42,199,215,245,249,180,91, \ldots$
@@ -446,3 +462,75 @@ And finally, binary fields work conveniently with bits: if you do math with numb
 This all means that we can do things like the Reed-Solomon encoding that we did above, in a way that completely avoids integers "blowing up" like we saw in our example, and in a way that is extremely "native" to the kind of calculation that computers are good at. The "splitting" property of binary fields - how we were able to do $1100101010001111=11001010+10001111*x_3$ , and then keep splitting as little or as much as we wanted, is also crucial for enabling a lot of flexibility.
 
 ## Full Binius
+*See* *[here](https://github.com/ethereum/research/blob/master/binius/packed_binius.py) for a python implementation of this protocol.*
+
+Now, we can get to "full Binius", which adjusts "simple Binius" to (i) work over binary fields, and (ii) let us commit to individual bits. This protocol is tricky to understand, because it keeps going back and forth between different ways of looking at a matrix of bits; it certainly took me longer to understand than it usually takes me to understand a cryptographic protocol. But once you understand binary fields, the good news is that there isn't any "harder math" that Binius depends on. This is not [elliptic curve pairings](https://vitalik.eth.limo/general/2017/01/14/exploring_ecp.html), where there are deeper and deeper rabbit holes of algebraic geometry to go down; here, binary fields are all you need.
+
+Let's look again at the full diagram:
+
+![img](https://vitalik.eth.limo/images/binius/binius.drawio.png)
+
+By now, you should be familiar with most of the components. The idea of "flattening" a hypercube into a grid, the idea of computing a row combination and a column combination as tensor products of the evaluation point, and the idea of checking equivalence between "Reed-Solomon extending then computing the row combination", and "computing the row combination then Reed-Solomon extending", were all in simple Binius.
+
+What's new in "full Binius"? Basically three things:
+
+- The individual values in the hypercube, and in the square, have to be bits (0 or 1)
+- The extension process extends bits into more bits, by grouping bits into columns and temporarily pretending that they are larger field elements
+- After the row combination step, there's an element-wise "decompose into bits" step, which converts the extension back into bits
+
+We will go through both in turn. First, the new extension procedure. A Reed-Solomon code has the fundamental limitation that if you are extending $n$ values to $k \times n$ values, you need to be working in a field that has $k \times n$ different values that you can use as coordinates. With $F_2$ (aka, bits), you cannot do that. And so what we do is, we "pack" adjacent $F_2$ elements together into larger values. In the example here, we're packing two bits at a time into elements in $\{0,1,2,3\}$ , because our extension only has four evaluation points and so that's enough for us. In a "real" proof, we would probably back 16 bits at a time together. We then do the Reed-Solomon code over these packed values, and unpack them again into bits.
+
+![img](https://vitalik.eth.limo/images/binius/basicbinius3.drawio.png)
+
+Now, the row combination. To make "evaluate at a random point" checks cryptographically secure, we need that point to be sampled from a pretty large space, much larger than the hypercube itself. Hence, while the points *within* the hypercube are bits, evaluations *outside* the hypercube will be much larger. In our example above, the "row combination" ends up being [11,4,6,1].
+
+This presents a problem: we know how to combine pairs of *bits* into a larger value, and then do a Reed-Solomon extension on that, but how do you do the same to pairs of much larger values?
+
+The trick in Binius is to do it bitwise: we look at the individual bits of each value (eg. for what we labeled as "11", that's $[1,1,0,1]$ ), and then we extend *row-wise*. That is, we perform the extension procedure on the 1 row of each element, then on the $x_0$ row, then on the " $x_1$ " row, then on the $x_0 \times x_1$ row, and so forth (well, in our toy example we stop there, but in a real implementation we would go up to 128 rows (the last one being $x_6 \times \ldots \times x_0$ )).
+
+Recapping:
+
+- We take the bits in the hypercube, and convert them into a grid
+- Then, we treat adjacent groups of bits *on each row* as larger field elements, and do arithmetic on them to Reed-Solomon extend the rows
+- Then, we take a row combination of each *column* of bits, and get a (for squares larger than 4x4, much smaller) column of bits for each row as the output
+- Then, we look at the output as a matrix, and treat the bits of *that* as rows again
+
+Why does this work? In "normal" math, the ability to (often) do linear operations in either order and get the same result stops working if you start slicing a number up by digits. For example, if I start with the number 345, and I multiply it by 8 and then by 3, I get 8280, and if do those two operations in reverse, I also do 8280. But if I insert a "split by digit" operation in between the two steps, it breaks down: if you do 8x then 3x, you get:
+
+$$
+345\xrightarrow{\times8}2760\to[2,7,6,0]\xrightarrow{\times3}[6,21,18,0]
+$$
+
+But if you do 3x then 8x, you get:
+
+$$
+345\xrightarrow{\times3}1035\to[1,0,3,5]\xrightarrow{\times8}[8,0,24,40]
+$$
+
+But in binary fields built with the tower construction, this kind of thing *does* work. The reason why has to do with their separability: if you multiply a big value by a small value, what happens in each segment, stays in each segment. If we multiply $1100101010001111$ by $11$, that's the same as first decomposing $1100101010001111$ into $11+10 \times x_2+10 \times x_2x_1+10 \times x_3+11 \times x_2x_3+11 \times x_1x_2x_3$ , and then multiplying each component by $11$ separately.
+
+## Putting it all together
+
+Generally, zero knowledge proof systems work by making statements about polynomials that simultaneously represent statements about the underlying evaluations: just like we saw in the Fibonacci example, $F(X+2)-F(X+1)-F(X)=Z(X) \times H(X)$ simultaneously checks all steps of the Fibonacci computation. We check statements about polynomials by proving evaluations at a random point: given a commitment to $F$, you might randomly choose eg. 1892470, demand proofs of evaluations of $F$ , $Z$ and $H$ at that point (and $H$ at adjacent points), check those proofs, and then check if $F(1892472)-F(1892471)-F(1892470)=Z(1892470) \times H(1892470)$ . This check at a random point stands in for checking the whole polynomial: if the polynomial equation *doesn't* match, the chance that it matches at a specific random coordinate is tiny.
+
+In practice, a major source of inefficiency comes from the fact that in real programs, most of the numbers we are working with are tiny: indices in for loops, True/False values, counters, and similar things. But when we "extend" the data using Reed-Solomon encoding to give it the redundancy needed to make Merkle proof-based checks safe, most of the "extra" values end up taking up the full size of a field, even if the original values are small.
+
+To get around this, we want to make the field as small as possible. Plonky2 brought us down from 256-bit numbers to 64-bit numbers, and then Plonky3 went further to 31 bits. But even this is sub-optimal. With binary fields, we can work over *individual bits*. This makes the encoding "dense": if your actual underlying data has `n` bits, then your encoding will have `n` bits, and the extension will have `8 * n` bits, with no extra overhead.
+
+Now, let's look at the diagram a third time:
+
+![img](https://vitalik.eth.limo/images/binius/binius.drawio.png)
+
+In Binius, we are committing to a *multilinear polynomial*: a hypercube $P(x_0,x_1\ldots x_k)$, where the individual evaluations $P(0,0\ldots0),P(0,0\ldots1)\text{ up to }P(1,1,\ldots1)$ are holding the data that we care about. To prove an evaluation at a point, we "re-interpret" the same data as a square. We then extend each *row*, using Reed-Solomon encoding over *groups* of bits, to give the data the redundancy needed for random Merkle branch queries to be secure. We then compute a random linear combination of rows, with coefficients designed so that the new combined row actually holds the evaluation that we care about. Both this newly-created row (which get re-interpreted as 128 rows of bits), and a few randomly-selected columns with Merkle branches, get passed to the verifier. This is $O(\sqrt{N})$ data: the new row has $O(\sqrt{N})$ size, and each of the (constant number of) columns that get passed has $O(\sqrt{N})$ size.
+
+The verifier then does a "row combination of the extension" (or rather, a few columns of the extension), and an "extension of the row combination", and verifies that the two match. They then compute a *column* combination, and check that it returns the value that the prover is claiming. And there's our proof system (or rather, the *polynomial commitment scheme*, which is the key building block of a proof system).
+
+## What did we *not* cover?
+- **Efficient algorithms to extend the rows**, which are needed to actually make the computational efficiency of the verifier $O(\sqrt{N})$ . With naive Lagrange interpolation, we can only get $O(N^{\frac23})$ . For this, we use Fast Fourier transforms over binary fields, described [here](https://vitalik.eth.limo/general/2019/05/12/fft.html) (though the exact implementation will be different, because this post uses a less efficient construction not based on recursive extension).
+- **Arithmetization**. Univariate polynomials are convenient because you can do things like $F(X+2)-F(X+1)-F(X)=Z(X) \times H(X)$ to relate adjacent steps in the computation. In a hypercube, the interpretation of "the next step" is not nearly as clean as " $X+1$ ". You *can* do $X \times k$ and jump around powers of $k$ , but this jumping around behavior would sacrifice many of the key advantages of Binius. The [Binius paper](https://eprint.iacr.org/2023/1784.pdf) introduces solutions to this (eg. see Section 4.3), but this is a "deep rabbit hole" in its own right.
+- **How to actually safely do specific-value checks**. The Fibonacci example required checking key boundary conditions: $F(0)=F(1)=1$ , and the value of $F(100)$ . But with "raw" Binius, checking at pre-known evaluation points is insecure. There are fairly simple ways to convert a known-evaluation check into an unknown-evaluation check, using what are called sum-check protocols; but we did not get into those here.
+- **Lookup protocols**, [another technology](https://zkresear.ch/t/lookup-singularity/65) which has been recently gaining usage as a way to make ultra-efficient proving systems. Binius can be combined with lookup protocols for many applications.
+- **Going beyond square-root verification time**. Square root is expensive: a Binius proof of $x^{32}$ bits is about 11 MB long. You can remedy this using some other proof system to make a "proof of a Binius proof", thus gaining both Binius's efficiency in proving the main statement *and* a small proof size. Another option is the much more complicated [FRI-Binius](https://eprint.iacr.org/2024/504) protocol, which creates a poly-logarithmic-sized proof (like [regular FRI](https://vitalik.eth.limo/general/2017/11/22/starks_part_2.html)).
+- **How Binius affects what counts as "SNARK-friendly"**. The basic summary is that, if you use Binius, you no longer need to care much about making computation "arithmetic-friendly": "regular" hashes are no longer more efficient than traditional arithmetic hashes, multiplication modulo $2^{32}$ or modulo $2^{256}$ is no longer a big headache compared to multiplication modulo $p$ , and so forth. But this is a complicated topic; lots of things change when everything is done in binary.
+
+I expect many more improvements in binary-field-based proving techniques in the months ahead.
