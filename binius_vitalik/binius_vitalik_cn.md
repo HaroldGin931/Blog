@@ -15,7 +15,18 @@
 ![Overview](https://vitalik.eth.limo/images/binius/binius.drawio.png)
 
 ## Table of contents
-- [ ] 生成目录 `Markdown All in One: Create Table of Contents`
+- [Binius: highly efficient proofs over binary fields](#binius-highly-efficient-proofs-over-binary-fields)
+  - [Table of contents](#table-of-contents)
+  - [Recap: finite fields](#recap-finite-fields)
+  - [Recap: arithmetization](#recap-arithmetization)
+  - [Plonky2: from 256-bit SNARKs and STARKs to 64-bit... only STARKs](#plonky2-from-256-bit-snarks-and-starks-to-64-bit-only-starks)
+  - [From small primes to binary](#from-small-primes-to-binary)
+  - [From univariate polynomials to hypercubes](#from-univariate-polynomials-to-hypercubes)
+  - [Simple Binius - an example](#simple-binius---an-example)
+  - [Binary fields](#binary-fields)
+  - [Full Binius](#full-binius)
+  - [Putting it all together](#putting-it-all-together)
+  - [What did we *not* cover?](#what-did-we-not-cover)
 
 ## Recap: finite fields
 
@@ -404,8 +415,9 @@ $$
 > - $x_0^2=x_0+1$ 的解在 $F_2$ 上不存在，通过把这个解添加到 $F_2$ 中，该方程变得有解，域则因为添加操作而变成了一个新的更大的域，此时一次扩域完成。
 > - - [ ] $x_1, x_2, \ldots$ 像上面这样定义的原因
 > - Vitalik 这里指的是，复数域是最大的代数域，你无法再通过代数扩张的方式得到一个比复数域还要大的域，且四元数不在我们讨论的范围内
-> - 实数域，复数域的元素有无穷多个，是无限域
+> - 实数域，复数域的元素有无穷多个，是无限域。
 > - 扩域：通过对原有域中引入一个新的元素，并将这个元素和原域中的所有元素做线性组合，所得出的全部结果就是这个扩域后的全部域元素，
+> - - [ ] 扩域的形式定义 a+bx 及简短解释，基的定义
 > - 以 $F_2$ 到 $F_{2^2}$ 的扩域为例，当扩域只引入了一个元素时，你可以把原域的元素铺成一个横轴和一个纵轴，如下表左侧，然后对纵轴上的每个数字都乘上被引入的新元素（如右侧）得到的值再和横轴的数字做加法，即可得到 $F_{2^2}$ 中的全部元素
 > 
 > > | $F_2$ | $0$     | $1$     |   | $F_{2^2}$      | $0$                | $1$                |
@@ -417,7 +429,7 @@ $$
 
 > And so on. This is often called the **tower construction**, because of how each successive extension can be viewed as adding a new layer to a tower. This is not the only way to construct binary fields of arbitary size, but it has some unique advantages that Binius takes advantage of.
 
-我们可以用 bit 来表示这些数字 $1100101010001111$ 。第一位表示
+我们可以用 bit 来表示这些数字 $1100101010001111$ 。第一位表示 $1$ 的倍数，第二位表示 $x_0$ 的倍数，剩下的序列表示 $x_1, x_1 \times x_0, x_2, x_2 \times x_0$ 以此类推，这种编码可以进行如下的分解：
 
 > We can represent these numbers as a list of bits, eg. $1100101010001111$. The first bit represents multiples of 1, the second bit represents multiples of $x_0$ , then subsequent bits represent multiples of: $x_1, x_1 \times x_0, x_2, x_2 \times x_0$ , and so forth. This encoding is nice because you can decompose it:
 
@@ -429,39 +441,99 @@ $$
 \end{align*}
 $$
 
-This is a relatively uncommon notation, but I like representing binary field elements as integers, taking the bit representation where more-significant bits are to the right. That is, $1=1, x_0=01=2,1+x_0=11=3,1+x_0+x_2=11001000=19$ , and so forth. $1100101010001111$ is, in this representation, $61779$.
+> 补充
+>
+> $F_2$ 中有一个基 $1$ ，通过 $x_0$ 扩域后，
+> | $F_{2}$ | $1$ |
+> |--|--|
+> |用 $x_0$ 扩域，生成新的基 | $x_0$ |
+> 
+> 得到 $F_{2^2}$有 2 个基：$1, x_0$，通过 $x_1$ 扩域后：
+> 
+> | $F_{2^2}$ | $1$ | $x_0$ |
+> |--|--|--|
+> |用 $x_1$ 扩域，生成新的基 | $x_1$ | $x_1x_0$|
+>
+> 得到 $F_{2^{2^2}}$，有 4 个基： $1, x_0, x_1, x_1x_0$ , 我们继续通过 $x_2$ 扩域:
+> | $F_{2^{2^2}}$ | $1$ | $x_0$ | $x_1$ | $x_1x_0$|
+> |--|--|--|--|--|
+> |用 $x_2$ 扩域，生成新的基 | $x_2$ | $x_2x_0$ | $x_2x_1$ | $x_2x_1x_0$ |
+> 
+> 得到 $F_{2^{2^3}}$ ， 有 8 个基，即 $1, x_0, x_1, x_1x_0, x_2, x_2x_0, x_2x_1, x_2x_1x_0$ ，不难发现，每一次扩域新增加的基是通过原有的每一个基 “乘上” 新元素得到的。
+> 
+> 在这里基的个数对应着能够表达的比特位个数，那当我们通过 $x_3$ 扩域后，我们就可以用这个域来表示一个 16 bit 的数字。对应原文中的例子，有：
+> 
+> | 原文中的例子 |1 |1 |0 |0 |1 |0 |1 |0 |1 |0 |0 |0 |1 |1 |1 |1 |
+> |--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|
+> |对应的基|1| $x_0$ | $x_1$ | $x_1x_0$ | $x_2$ | $x_2x_0$ | $x_2x_1$ | $x_2x_1x_0$ | $x_3$ | $x_3x_0$ | $x_3x_1$ | $x_3x_1x_0$ | $x_3x_2$ | $x_3x_2x_0$ | $x_3x_2x_1$ | $x_3x_2x_1x_0$ |
+> |基对应的整数|1|2|4|8|16|32|64|128|256|512|1024|2048|4096|8192|16384|32768|
+> 
+> 那么不难理解，一个 16 bit的数字按照一次扩域的定义 $a + bx_i$ 展开，我们有 $11001010+10001111 \times x_3$ 。
 
-Addition in binary fields is just XOR (and, incidentally, so is subtraction); note that this implies that $x+x=0$ for any $x$ . To multiply two elements $x \times y$, there's a pretty simple recursive algorithm: split each number into two halves:
+这是一种相对不常见的表示法，但我喜欢将二进制字段元素表示为整数，采用更有效 bit 在右侧的位表示。也就是说，$1=1, x_0=01=2,1+x_0=11=3,1+x_0+x_2=11001000=19$, 等等。上个例子中的 $1100101010001111$ 是 61779。
+
+> This is a relatively uncommon notation, but I like representing binary field elements as integers, taking the bit representation where more-significant bits are to the right. That is, $1=1, x_0=01=2,1+x_0=11=3,1+x_0+x_2=11001000=19$ , and so forth. $1100101010001111$ is, in this representation, $61779$.
+
+二进制域中的加法即 XOR （减法亦如此）这意味着对于任何 $x$ $x+x=0$ 。对于两个元素的乘法 $x \times y$ ，有一个非常简单的递归算法：把每个数字分成两半：
+
+> Addition in binary fields is just XOR (and, incidentally, so is subtraction); note that this implies that $x+x=0$ for any $x$ . To multiply two elements $x \times y$, there's a pretty simple recursive algorithm: split each number into two halves:
 
 $$
-x=L_x+R_x \times x_k~y=L_y+R_y\times x_k
+x=L_x+R_x \times x_k \\
+y=L_y+R_y\times x_k
 $$
 
-Then, split up the multiplication:
+然后我们使用乘法分配律可以得到
+
+> Then, split up the multiplication:
 
 $$
 x\times y=(L_x\times L_y)+(L_x\times R_y)\times x_k+(R_x\times L_y)\times x_k+(R_x\times R_y)\times x_k^2
 $$
 
-The last piece is the only slightly tricky one, because you have to apply the reduction rule, and replace $R_x*R_y*x_k^2$ with $R_x*R_y*(x_{k-1}*x_k+1)$ . There are more efficient ways to do multiplication, analogues of the [Karatsuba algorithm](https://en.wikipedia.org/wiki/Karatsuba_algorithm) and [fast Fourier transforms](https://vitalik.eth.limo/general/2019/05/12/fft.html), but I will leave it as an exercise to the interested reader to figure those out.
+最后一部分是唯一有点棘手的，因为你必须应用 “reduction rule”。有更有效的方法来做乘法，类似于 Karatsuba 算法和快速傅里叶变换，但我将把它作为一个练习留给有兴趣的读者去弄清楚。
 
-Division in binary fields is done by combining multiplication and inversion: $\frac35=3 \times \frac15$ . The "simple but slow" way to do inversion is an application of [generalized Fermat's little theorem](https://planetmath.org/fermatslittletheorem): $\frac1x=x^{2^{2^k}-2}$ for any $k$ where $2^{2^k}>x$ . In this case, $\frac15=5^{14}=14$ , and so $\frac35=3*14=9$ . There is also a more complicated but more efficient inversion algorithm, which you can find [here](https://ieeexplore.ieee.org/document/612935). You can use [the code here](https://github.com/ethereum/research/blob/master/binius/binary_fields.py) to play around with binary field addition, multiplication and division yourself.
+> The last piece is the only slightly tricky one, because you have to apply the reduction rule, and replace $R_x*R_y*x_k^2$ with $R_x*R_y*(x_{k-1}*x_k+1)$ . There are more efficient ways to do multiplication, analogues of the [Karatsuba algorithm](https://en.wikipedia.org/wiki/Karatsuba_algorithm) and [fast Fourier transforms](https://vitalik.eth.limo/general/2019/05/12/fft.html), but I will leave it as an exercise to the interested reader to figure those out.
+
+二进制字段中的除法是通过结合乘法和倒数来完成的。一个简单的倒数算法应用了广义费马小定理。还有一个更复杂但更有效的反演算法，你可以在 [这里](https://ieeexplore.ieee.org/document/612935) 。你可以使用[这里](https://github.com/ethereum/research/blob/master/binius/binary_fields.py) 的代码来体验二进制字段的加法，乘法和除法。
+
+> Division in binary fields is done by combining multiplication and inversion: $\frac35=3 \times \frac15$ . The "simple but slow" way to do inversion is an application of [generalized Fermat's little theorem](https://planetmath.org/fermatslittletheorem): $\frac1x=x^{2^{2^k}-2}$ for any $k$ where $2^{2^k}>x$ . In this case, $\frac15=5^{14}=14$ , and so $\frac35=3*14=9$ . There is also a more complicated but more efficient inversion algorithm, which you can find [here](https://ieeexplore.ieee.org/document/612935). You can use [the code here](https://github.com/ethereum/research/blob/master/binius/binary_fields.py) to play around with binary field addition, multiplication and division yourself.
 
 ![img](https://vitalik.eth.limo/images/binius/additiontable.png) ![img](https://vitalik.eth.limo/images/binius/multiplicationtable.png)
 
-*Left: addition table for four-bit binary field elements (ie. elements made up only of combinations of $1\text{,}x_0\text{,}x_1\text{ and }x_0x_1$). Right: multiplication table for four-bit binary field elements.*
+*左：4 bit 二进制域的加法表（表中元素是用 $1\text{,}x_0\text{,}x_1$ 和 $x_0x_1$ 组合而来的）右：乘法表*
 
-The beautiful thing about this type of binary field is that it combines some of the best parts of "regular" integers and modular arithmetic. Like regular integers, binary field elements are unbounded: you can keep extending as far as you want. But like modular arithmetic, if you do operations over values within a certain size limit, all of your answers also stay within the same bound. For example, if you take successive powers of $42$, you get:
+> *Left: addition table for four-bit binary field elements (ie. elements made up only of combinations of $1\text{,}x_0\text{,}x_1\text{ and }x_0x_1$). Right: multiplication table for four-bit binary field elements.*
+
+这种二进制域最棒的特性莫过于其结合了一些“常规的”整数运算和模运算。如同整数一样，二进制域中的元素是没有上限的，只要你进行域扩张操作，但也具有模运算的好处，在二进制域上进行操作时，得到的结果依然在这个域内。例如：
+
+> The beautiful thing about this type of binary field is that it combines some of the best parts of "regular" integers and modular arithmetic. Like regular integers, binary field elements are unbounded: you can keep extending as far as you want. But like modular arithmetic, if you do operations over values within a certain size limit, all of your answers also stay within the same bound. For example, if you take successive powers of $42$, you get:
 
 $1,42,199,215,245,249,180,91, \ldots$
 
-And after $255$ steps, you get right back to $42^{255}=1$. And like *both* regular integers and modular arithmetic, they obey the usual laws of mathematics: $a \times b=b \times a,a \times (b+c)=a \times b+a \times c$, and even some strange new laws, eg. $a^2+b^2=(a+b)^2$ (the usual $2ab$ term is missing, because in a binary field, $1+1=0$).
+并且在 255 步之后你会重新回到起点 $42^{255}=1$ 。
 
-And finally, binary fields work conveniently with bits: if you do math with numbers that fit into $2^k$ bits, then all of your outputs will also fit into $2^k$ bits. This avoids awkwardness like eg. with Ethereum's [EIP-4844](https://www.eip4844.com/), where the individual "chunks" of a blob have to be numbers modulo `52435875175126190479447740508185965837690552500527637822603658699938581184513`, and so encoding binary data involves throwing away a bit of space and doing extra checks at the application layer to make sure that each element is storing a value less than  $2^{248}$ . It also means that binary field arithmetic is *super* fast on computers - both CPUs, and theoretically optimal FPGA and ASIC designs.
+> And after $255$ steps, you get right back to $42^{255}=1$. 
+> 
+> 补充：这里我实在是没算明白这里是怎么算的。。。
 
-This all means that we can do things like the Reed-Solomon encoding that we did above, in a way that completely avoids integers "blowing up" like we saw in our example, and in a way that is extremely "native" to the kind of calculation that computers are good at. The "splitting" property of binary fields - how we were able to do $1100101010001111=11001010+10001111*x_3$ , and then keep splitting as little or as much as we wanted, is also crucial for enabling a lot of flexibility.
+就像正整数和模运算一样，它们遵循通常的数学定律：$a \times b=b \times a, a \times (b+c) = a \times b+a \times c$，甚至还有一些奇怪的规则。比如： $a^2+b^2=(a+b)^2$ （因为 $(a+b)^2 = a^2 + 2ab + b^2$ 其中 $2ab \mod 2 = 0$ ）
+
+> And like *both* regular integers and modular arithmetic, they obey the usual laws of mathematics: $a \times b=b \times a,a \times (b+c)=a \times b+a \times c$, and even some strange new laws, eg. $a^2+b^2=(a+b)^2$ (the usual $2ab$ term is missing, because in a binary field, $1+1=0$).
+
+并且还有一点，二进制域与位可以方便地配合使用：如果你在一个能用 $2^k$ bits 表达的数字，那你所有可能的输出也能用 $2^k$ bits 来表达。这避免了一些棘手的问题，在以太坊 [EIP-4844](https://www.eip4844.com/) ，
+
+TODO:  
+- [ ] 4844 这里的翻译：一个 blob 的 chunk 需要去模`52435875175126190479447740508185965837690552500527637822603658699938581184513` ，因此编码二进制数据需要扔掉一些空间，并在应用层进行额外的检查，以确保每个元素存储的值小于 2 的 248 次方。这也意味着二进制域运算在计算机上是超级快的 —— 无论是 CPU，还是理论上最优的 FPGA 和 ASIC 设计。
+
+> And finally, binary fields work conveniently with bits: if you do math with numbers that fit into $2^k$ bits, then all of your outputs will also fit into $2^k$ bits. This avoids awkwardness like eg. with Ethereum's [EIP-4844](https://www.eip4844.com/), where the individual "chunks" of a blob have to be numbers modulo `52435875175126190479447740508185965837690552500527637822603658699938581184513`, and so encoding binary data involves throwing away a bit of space and doing extra checks at the application layer to make sure that each element is storing a value less than  $2^{248}$ . It also means that binary field arithmetic is *super* fast on computers - both CPUs, and theoretically optimal FPGA and ASIC designs.
+
+这意味着我们可以用一种完全避免整数「爆炸」的方式去做 Reed-Solomon 里德所罗门编码 ，来就像在前文中中看到的那样，并且该方式还是计算机擅长的原生运算。二进制域的拆分属性（参照这个例子 $1100101010001111 = 11001010 + 10001111 \times x_3$ ）能让我们根据需要进行拆分，能让我们具有更大的灵活性。
+
+> This all means that we can do things like the Reed-Solomon encoding that we did above, in a way that completely avoids integers "blowing up" like we saw in our example, and in a way that is extremely "native" to the kind of calculation that computers are good at. The "splitting" property of binary fields - how we were able to do $1100101010001111=11001010+10001111*x_3$ , and then keep splitting as little or as much as we wanted, is also crucial for enabling a lot of flexibility.
 
 ## Full Binius
+
 *See* *[here](https://github.com/ethereum/research/blob/master/binius/packed_binius.py) for a python implementation of this protocol.*
 
 Now, we can get to "full Binius", which adjusts "simple Binius" to (i) work over binary fields, and (ii) let us commit to individual bits. This protocol is tricky to understand, because it keeps going back and forth between different ways of looking at a matrix of bits; it certainly took me longer to understand than it usually takes me to understand a cryptographic protocol. But once you understand binary fields, the good news is that there isn't any "harder math" that Binius depends on. This is not [elliptic curve pairings](https://vitalik.eth.limo/general/2017/01/14/exploring_ecp.html), where there are deeper and deeper rabbit holes of algebraic geometry to go down; here, binary fields are all you need.
