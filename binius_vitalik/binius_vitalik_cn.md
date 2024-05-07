@@ -2,7 +2,11 @@
 
 *除了翻译之外，在 Vitalik 的原文基础上做了一些补充内容，用以帮助读者更好的理解这篇文章，特别感谢 Jade 的贡献*
 
-*本文的 Plonky2 部份并不影响读者 理解Binius*
+*本文的 Plonky2 部份并不影响读者理解 Binius*
+
+*转载时请附上本链接地址*
+
+*原文信息 https://vitalik.eth.limo/general/2024/04/29/binius.html*
 
 这篇文章主要面向大致熟悉 2019 年密码学的读者，尤其是 SNARK 和 STARK。如果你不是，我建议你先阅读这些文章。特别感谢 Justin Drake、Jim Posen、Benjamin Diamond 和 Radi Cojbasic 的反馈和评论。
 
