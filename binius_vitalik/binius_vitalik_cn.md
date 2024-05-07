@@ -81,7 +81,17 @@ $$
 TODO:
 - [ ] 
 
+SNARKs 和 STARKs 是通过*算术化(arithmetization)*来证明计算机的程序事项：将你想证明的关于一个程序的*陈述(statement)*转换为涉及多项式的数学方程。方程的有效解就对应程序的有效执行。
+
 > The way that SNARKs and STARKs prove things about computer programs is through **arithmetization**: you convert a statement about a program that you want to prove, into a mathematical equation involving polynomials. A valid solution to the equation corresponds to a valid execution of the program.
+
+为了举一个简单的例子，假设我计算了第 100 个Fibonacci 数，并且我想向你证明它是什么。我构造了一个多项式 $F$ 来编码 Fibonnacci 数：因此 $F(0)=F(1)=1,F(2)=2,F(3)=3,F(4)=5$ ，以此类推到，直到第 100 步。我需要证明的条件是：对于 $x=\{0,1 \ldots 98\}$ ，都有 $F(x+2)=F(x)+F(x+1)$ 。我可以通过给出下面这样的商式来说服你：
+
+$$
+H(x)=\frac{F(x+2)-F(x+1)-F(x)}{Z(x)}
+$$
+
+其中， $Z(x)=(x-0)*(x-1)*\ldots*(x-98)$ 。如果我能提供满足这个方程的有效的 $F$ 和 $H$ ，那么 $F$ 在 $x=\{0,1 \ldots 98\}$ 范围内必须满足 $F(x+2)-F(x+1)-F(x)$ 。如果我额外验证 $F$ 满足 $F(0)=F(1)=1$ ，那么 $F(100)$ 一定真的是第 100 个 Fibonacci 数。
 
 > To give a simple example, suppose that I computed the 100'th Fibonacci number, and I want to prove to you what it is. I create a polynomial $F$ that encodes Fibonacci numbers: so $F(0)=F(1)=1,F(2)=2,F(3)=3,F(4)=5$, and so on for 100 steps. The condition that I need to prove is that $F(x+2)=F(x)+F(x+1)$ across the range $x=\{0,1 \ldots 98\}$. I can convince you of this by giving you the quotient:
 
@@ -91,7 +101,11 @@ $$
 
 > Where $Z(x)=(x-0)*(x-1)*\ldots*(x-98)$. If I can provide valid $F$ and $H$ that satisfy this equation, then $F$ must satisfy $F(x+2)-F(x+1)-F(x)$ across that range. If I additionally verify that $F$ satisfies $F(0)=F(1)=1$ , then $F(100)$ must actually be the 100th Fibonacci number.
 
+如果你想证明更复杂的东西，那么你可以用一个更复杂的方程来替换“简单”的关系式 $F(x+2)=F(x)+F(x+1)$，这个方程基本上在说“$F(x+1)$ 是以状态 $F(x)$ 初始化虚拟机并运行一个计算步骤后的输出”。你也可以用一个更大的数字来替换数字 100 ，例如 100000000 ，以容纳更多的步骤。
+
 > If you want to prove something more complicated, then you replace the "simple" relation $F(x+2)=F(x)+F(x+1)$ with a more complicated equation, which basically says "$F(x+1)$ is the output of initializing a virtual machine with the state $F(x)$, and running one computational step". You can also replace the number 100 with a bigger number, eg. 100000000, to accommodate more steps.
+
+所有的 SNARKs 和 STARKs 都基于这样一个想法，即使用一个关于多项式（或有时是向量和矩阵）的简单方程来代表大量个别值之间的关系。并非所有的都涉及以与上述相同的方式检查相邻计算步骤之间的等价性：例如，[PLONK](https://vitalik.eth.limo/general/2019/09/22/plonk.html)就不涉及，R1CS也不涉及。但许多最有效率的方法都这样做，因为多次强制执行相同的检查（或相同的几个检查）有助于最小化开销。
 
 > All SNARKs and STARKs are based on this idea of using a simple equation over polynomials (or sometimes vectors and matrices) to represent a large number of relationships between individual values. Not all involve checking equivalence between adjacent computational steps in the same way as above: [PLONK](https://vitalik.eth.limo/general/2019/09/22/plonk.html) does not, for example, and neither does R1CS. But many of the most efficient ones do, because enforcing the same check (or the same few checks) many times makes it easier to minimize overhead.
 
