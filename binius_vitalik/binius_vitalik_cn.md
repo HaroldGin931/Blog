@@ -2,26 +2,26 @@
 
 *除了翻译之外，在 Vitalik 的原文基础上做了一些补充内容，用以帮助读者更好的理解这篇文章，特别感谢 Jade 的贡献*
 
-*本文的 Plonky2 部份并不影响读者理解 Binius*
+*本文的 Plonky2 部分并不影响读者理解 Binius*
 
 *转载时请附上本链接地址*
 
 *原文信息 https://vitalik.eth.limo/general/2024/04/29/binius.html*
 
-这篇文章主要面向大致熟悉 2019 年密码学的读者，尤其是 SNARK 和 STARK。如果你不是，我建议你先阅读这些文章。特别感谢 Justin Drake、Jim Posen、Benjamin Diamond 和 Radi Cojbasic 的反馈和评论。
+这篇文章主要是为那些大致熟悉 2019 年时代的密码学读者准备的，尤其是对[SNARK](https://vitalik.eth.limo/general/2021/01/26/snarks.html) 和 [STARK](https://vitalik.eth.limo/general/2018/07/21/starks_part_3.html)有所了解的读者。如果你不是，我建议你先阅读这些文章。特别感谢 Justin Drake、Jim Posen、Benjamin Diamond 和 Radi Cojbasic 的反馈和评论。
 
-> This post is primarily intended for readers roughly familiar with 2019-era cryptography, especially SNARKs and STARKs. If you are not, I recommend reading those articles first. Special thanks to Justin Drake, Jim Posen, Benjamin Diamond and Radi Cojbasic for feedback and review.
+> This post is primarily intended for readers roughly familiar with 2019-era cryptography, especially [SNARKs](https://vitalik.eth.limo/general/2021/01/26/snarks.html) and [STARKs](https://vitalik.eth.limo/general/2018/07/21/starks_part_3.html). If you are not, I recommend reading those articles first. Special thanks to Justin Drake, Jim Posen, Benjamin Diamond and Radi Cojbasic for feedback and review.
 
-在过去的两年中，STARK已经成为一种关键且不可替代的技术，可以有效地生成对**复杂语句的易验证加密证明**（例如，证明以太坊区块是有效的）。其中一个关键原因是域的大小：为了确保安全性，基于椭圆曲线的 SNARK 需要工作在 256 位整数上，而 STARK 可以使用更小的域，并获得更高的效率：首先是 Goldilocks field（64 位整数），然后是 Mersenne31 和 BabyBear（均为 31 位）。由于这些效率的提高，使用Goldilocks的Plonky2在证明多种计算方面比其前辈快数百倍。
+在过去的两年中，[STARK](https://vitalik.eth.limo/general/2018/07/21/starks_part_3.html)已经成为一种关键且不可替代的技术，可以有效地生成对**[复杂语句的易验证加密证明](https://vitalik.eth.limo/general/2021/01/26/snarks.html)**（例如，证明以太坊区块是有效的）。其中一个关键原因是域的大小：为了确保安全性，基于椭圆曲线的 SNARK 需要工作在 256 位整数上，而 STARK 可以使用更小的域，并获得更高的效率：首先是 [Goldilocks field](https://polygon.technology/blog/plonky2-a-deep-dive)（64 位整数），然后是 [Mersenne31 和 BabyBear](https://blog.icme.io/small-fields-for-zero-knowledge/)（均为 31 位）。由于这些效率的提高，使用 Goldilocks 的 Plonky2 在证明多种计算方面比其前辈快[数百倍](https://polygon.technology/blog/introducing-plonky2)。
 
 > Over the past two years, [STARKs](https://vitalik.eth.limo/general/2018/07/21/starks_part_3.html) have become a crucial and irreplaceable technology for efficiently making [easy-to-verify cryptographic proofs of very complicated statements](https://vitalik.eth.limo/general/2021/01/26/snarks.html) (eg. proving that an Ethereum block is valid). A key reason why is *small field sizes*: whereas elliptic curve-based SNARKs require you to work over 256-bit integers in order to be secure enough, STARKs let you use much smaller field sizes, which are more efficient: first [the Goldilocks field](https://polygon.technology/blog/plonky2-a-deep-dive) (64-bit integers), and then [Mersenne31 and BabyBear](https://blog.icme.io/small-fields-for-zero-knowledge/) (both 31-bit). Thanks to these efficiency gains, Plonky2, which uses Goldilocks, is [hundreds of times faster](https://polygon.technology/blog/introducing-plonky2) at proving many kinds of computation than its predecessors.
 
-自然而然的：在这种域越来越小的趋势下，我们能否通过直接操作 0 和 1 来构建一个更快的证明系统？这正是 Binius 试图做的事情，Binius 使用了许多数学技巧，使其与三年前的 SNARK 和 STARK 截然不同。这篇文章介绍了为什么小域（Small fields）使证明生成更有效率，为什么二进制字段具有独特的强大功能，以及 Binius 用来使二进制字段上的证明如此有效的技巧。
+自然而然地有这样一个问题：在这种域越来越小的趋势下，我们能否通过直接操作 0 和 1 来构建一个更快的证明系统？这正是 [Binius](https://eprint.iacr.org/2023/1784.pdf) 试图做的事情，Binius 使用了许多数学技巧，使其与三年前的 [SNARK](https://vitalik.eth.limo/general/2019/09/22/plonk.html) 和 [STARK](https://vitalik.eth.limo/general/2018/07/21/starks_part_3.html) 截然不同。这篇文章介绍了为什么*小域（small fields）*使证明生成更有效率，为什么*二进制域（binary fields）*具有独特的强大功能，以及 Binius 用来使二进制域上的证明如此有效的技巧。
 
 > A natural question to ask is: can we take this trend to its logical conclusion, building proof systems that run even faster by operating directly over zeroes and ones? This is exactly what [Binius](https://eprint.iacr.org/2023/1784.pdf) is trying to do, using a number of mathematical tricks that make it *very* different from the [SNARKs](https://vitalik.eth.limo/general/2019/09/22/plonk.html) and [STARKs](https://vitalik.eth.limo/general/2018/07/21/starks_part_3.html) of three years ago. This post goes through the reasons why small fields make proof generation more efficient, why binary fields are uniquely powerful, and the tricks that Binius uses to make proofs over binary fields work so effectively.
 
 ![Overview](https://vitalik.eth.limo/images/binius/binius.drawio.png)
-
+图片：Binius. 在这篇博客的最后，你应该能理解这张图中的每一个部分。
 ## Table of contents
 - [Binius: highly efficient proofs over binary fields](#binius-highly-efficient-proofs-over-binary-fields)
   - [Table of contents](#table-of-contents)
@@ -38,15 +38,15 @@
 
 ## Recap: finite fields
 
-加密证明系统的关键任务之一是对大量数据进行操作，同时让生成的结果足够的小（存储意义上的足够小）。如果把一个大程序的语句“压缩”成一个包含几个数字的数学方程式，但这些数字和原来的程序一样大，毫无疑问，这样的操作是没有意义的。
+加密证明系统的关键任务之一是对大量数据进行操作，同时保持数字的规模小（存储意义上的足够小）。如果你能将一个关于大型程序的语句“压缩”成一个涉及少量数字的数学方程，但这些数字的大小和原来的程序一样大，那么你并没有获得任何优势。
 
 > One of the key tasks of a cryptographic proving system is to operate over huge amounts of data, while keeping the numbers small. If you can compress a statement about a large program into a mathematical equation involving a few numbers, but those numbers are as big as the original program, you have not gained anything.
 
-在进行复杂算术运算的同时确保数字维持在一个很小的范围内，密码学家通常使用模运算。简单来说， 我们选择一些素数$p$。$\%$ 运算符表示“取余数”：$15 \% 7=1, 53 \% 10 = 3$，依此类推（请注意，取模的结果始终是非负的，例如$-1 \% 10 = 9$）。
+为了在进行复杂算术运算的同时确保数字维持在一个很小的范围内，密码学家通常使用**模运算**。简单来说， 我们选择一些素数 $p$ 。 $\%$ 运算符表示“取余数”： $15 \% 7=1, 53 \% 10 = 3$ ，依此类推（请注意，取模的结果始终是非负的，例如 $-1 \% 10 = 9$ ）。
 
 > To do complicated arithmetic while keeping numbers small, cryptographers generally use **modular arithmetic**. We pick some prime "modulus" $p$. The $\%$ operator means "take the remainder of" $15 \% 7=1, 53 \% 10 = 3$, etc (note that the answer is always non-negative, so for example $-1 \% 10 = 9$).
 
-为了在保持小数字的同时进行复杂的算术运算，密码学家通常使用模算术（取模运算）。我们选择一些素数p。% 运算符表示“取余数”：15 % 7=1,53 % 10=3，依此类推（请注意，取模的结果始终是非负的，例如 −1 % 10=9）。
+<!-- 为了在保持小数字的同时进行复杂的算术运算，密码学家通常使用模算术（取模运算）。我们选择一些素数p。% 运算符表示“取余数”：15 % 7=1,53 % 10=3，依此类推（请注意，取模的结果始终是非负的，例如 −1 % 10=9）。 -->
 
 ![Overview](https://vitalik.eth.limo/images/binius/clock.png)
 
@@ -60,29 +60,33 @@
 
 $$
 \begin{align*}
-x + y =>& (x + y)\mod p \\
-x \times y =>& (x \times y)\mod p \\
-x^y =>& (x^y)\mod p \\
-x - y =>& (x - y)\mod p \\
-x/y =>& (x \times y^{p-2})\mod p
+x + y \Rightarrow & (x + y)\mod p \\
+x \times y \Rightarrow & (x \times y)\mod p \\
+x^y \Rightarrow & (x^y)\mod p \\
+x - y \Rightarrow & (x - y)\mod p \\
+x/y \Rightarrow & (x \times y^{p-2})\mod p
 \end{align*}
 $$
 
-上面的规则都是自洽的， 例如，我们取 $p=7$，则：
-- $5 + 3 = 1$ (because $8 \% 7 = 1$)
-- $1 - 3 = 5$ (because $-2 \% 7 = 5$)
-- $2 \times 5 = 3$ (because $10 \% 7 = 3$)
-- $3/5 = 2$ (because $(3 \times 5^5) \% 7 = 9375 \%7 = 2$)
+上面的规则都是自洽的。 例如，如果 $p=7$，那么：
+- $5 + 3 = 1$ (因为 $8 \% 7 = 1$)
+- $1 - 3 = 5$ (因为 $-2 \% 7 = 5$)
+- $2 \times 5 = 3$ (因为 $10 \% 7 = 3$)
+- $3/5 = 2$ (因为 $(3 \times 5^5) \% 7 = 9375 \%7 = 2$)
 
-这种结构的一个更一般的术语是有限域。有限域是一种数学结构，它遵循上述的算术法则，但是可能的计算结果是有限的，因此每一种可能的输出都可以用固定的长度来表示。
+这种结构的一个更通用术语是**有限域**。[有限域](https://en.wikipedia.org/wiki/Finite_field)是一种数学结构，它遵循通常的算术定律，但存在可能值的数量有限，因此每个值都可以用固定的大小来表示。
 
 > A more general term for this kind of structure is a **finite field**. A [finite field](https://en.wikipedia.org/wiki/Finite_field) is a mathematical structure that obeys the usual laws of arithmetic, but where there's a limited number of possible values, and so each value can be represented in a fixed size.
 >
 > 补充：有限域是一种数学结构，其包含了有限个元素，域中的元素能够进行加减乘除的运算，且计算后的结果仍是属于这个有限域，因此有限域中的每个元素都可以用固定长度表示。有限域最常见的例子是 modulus $p$ 为素数。我们依然用 modulus = 7 举例，有限域 $F_7$ 包含的元素有 $\{0, 1, 2, 3, 4, 5, 6\}$, 这个域中的每一个元素都是整数，在这个域中任取两个元素进行计算后的结果仍然属于这个域。
+> 
+> 在域中可以定义加、减、乘、除四种运算。例如我们熟知的有理数域、实数域和复数域，但是注意整数并不是一个域，因为两个整数相除之后的结果不一定是整数（例如 $2 / 3$ 不是一个整数 ）。那么有限域是什么呢？就是如果一个域，它的元素个数是有限个，我们就称之为有限域。上述举的有理数域、实数域和复数域，这些域中元素的个数都是无限的，都不是有限域。我们假设一个有限域的大小（即域中元素的个数）为 $q$ ，可以用 $F_q$ 来表示这个有限域，例如 Binius 用到的最简单的一个有限域 $F_2 = \{ 0,1\}$ 。 
 
-模算术（或素数域）是最常见的有限域类型，但也有另一种类型：扩域。您之前可能已经看过一个扩域：复数。我们“想象”一个新元素，我们用 $i$ 表示 ，并声明它满足 $i^2=−1$。然后，您可以使用任意的实数和 $i$ 做线性组合 ，并用它做数学运算： $(3i+2)*(2i+4)=6i^2+12i+4i+8=16i+2$ 。我们同样可以对素数域进行扩域。当我们开始处理更小的字段时，素数域的扩域对于保持安全性变得越来越重要，而 Binius 使用的二进制域及其扩域具有非常好的实用性。
+模算术（或**素数域**）是最常见的有限域类型，但也有另一种类型：**扩域**。您之前可能已经看过一个扩域：复数。我们“想象”一个新元素，我们用 $i$ 表示 ，并声明它满足 $i^2=−1$。然后，您可以使用任意的实数和 $i$ 做线性组合 ，并用它做数学运算： $(3i+2)*(2i+4)=6i^2+12i+4i+8=16i+2$ 。我们同样可以对素数域进行扩域。当我们开始处理更小的字段时，素数域的扩域对于保持安全性变得越来越重要，而 Binius 使用的二进制域及其扩域具有非常好的实用性。
 
 > Modular arithmetic (or **prime fields**) is the most common type of finite field, but there is also another type: **extension fields**. You've probably already seen an extension field before: the complex numbers. We "imagine" a new element, which we label $i$, and declare that it satisfies $i^2=−1$. You can then take any combination of regular numbers and $i$, and do math with it: $(3i+2)*(2i+4)=6i^2+12i+4i+8=16i+2$ . We can similarly take extensions of prime fields. As we start working over fields that are smaller, extensions of prime fields become increasingly important for preserving security, and binary fields (which Binius uses) depend on extensions entirely to have practical utility.
+
+- [ ] 扩域是理解 Binius 非常重要的一个部分。这里用我们熟悉的实数域扩域到复数域来说明下扩域这个概念。
 
 ## Recap: arithmetization 
 
