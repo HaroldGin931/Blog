@@ -16,13 +16,15 @@
 
 > Over the past two years, [STARKs](https://vitalik.eth.limo/general/2018/07/21/starks_part_3.html) have become a crucial and irreplaceable technology for efficiently making [easy-to-verify cryptographic proofs of very complicated statements](https://vitalik.eth.limo/general/2021/01/26/snarks.html) (eg. proving that an Ethereum block is valid). A key reason why is *small field sizes*: whereas elliptic curve-based SNARKs require you to work over 256-bit integers in order to be secure enough, STARKs let you use much smaller field sizes, which are more efficient: first [the Goldilocks field](https://polygon.technology/blog/plonky2-a-deep-dive) (64-bit integers), and then [Mersenne31 and BabyBear](https://blog.icme.io/small-fields-for-zero-knowledge/) (both 31-bit). Thanks to these efficiency gains, Plonky2, which uses Goldilocks, is [hundreds of times faster](https://polygon.technology/blog/introducing-plonky2) at proving many kinds of computation than its predecessors.
 
-自然而然地有这样一个问题：在这种域越来越小的趋势下，我们能否通过直接操作 0 和 1 来构建一个更快的证明系统？这正是 [Binius](https://eprint.iacr.org/2023/1784.pdf) 试图做的事情，Binius 使用了许多数学技巧，使其与三年前的 [SNARK](https://vitalik.eth.limo/general/2019/09/22/plonk.html) 和 [STARK](https://vitalik.eth.limo/general/2018/07/21/starks_part_3.html) 截然不同。这篇文章介绍了为什么*小域（small fields）*使证明生成更有效率，为什么*二进制域（binary fields）*具有独特的强大功能，以及 Binius 用来使二进制域上的证明如此有效的技巧。
+自然而然地有这样一个问题：在这种域越来越小的趋势下，我们能否通过直接操作 0 和 1 来构建一个更快的证明系统？这正是 [Binius](https://eprint.iacr.org/2023/1784.pdf) 试图做的事情，Binius 使用了许多数学技巧，使其与三年前的 [SNARK](https://vitalik.eth.limo/general/2019/09/22/plonk.html) 和 [STARK](https://vitalik.eth.limo/general/2018/07/21/starks_part_3.html) 截然不同。这篇文章介绍了为什么*小域（small fields）*使证明生成更有效率，为什么*二进制域（binary fields）* 具有独特的强大功能，以及 Binius 用来使二进制域上的证明如此有效的技巧。
 
 > A natural question to ask is: can we take this trend to its logical conclusion, building proof systems that run even faster by operating directly over zeroes and ones? This is exactly what [Binius](https://eprint.iacr.org/2023/1784.pdf) is trying to do, using a number of mathematical tricks that make it *very* different from the [SNARKs](https://vitalik.eth.limo/general/2019/09/22/plonk.html) and [STARKs](https://vitalik.eth.limo/general/2018/07/21/starks_part_3.html) of three years ago. This post goes through the reasons why small fields make proof generation more efficient, why binary fields are uniquely powerful, and the tricks that Binius uses to make proofs over binary fields work so effectively.
 
 ![Overview](https://vitalik.eth.limo/images/binius/binius.drawio.png)
 图片：Binius. 在这篇博客的最后，你应该能理解这张图中的每一个部分。
+
 ## Table of contents
+
 - [Binius: highly efficient proofs over binary fields](#binius-highly-efficient-proofs-over-binary-fields)
   - [Table of contents](#table-of-contents)
   - [Recap: finite fields](#recap-finite-fields)
@@ -69,6 +71,7 @@ x/y \Rightarrow & (x \times y^{p-2})\mod p
 $$
 
 上面的规则都是自洽的。 例如，如果 $p=7$，那么：
+
 - $5 + 3 = 1$ (因为 $8 \% 7 = 1$)
 - $1 - 3 = 5$ (因为 $-2 \% 7 = 5$)
 - $2 \times 5 = 3$ (因为 $10 \% 7 = 3$)
@@ -79,16 +82,16 @@ $$
 > A more general term for this kind of structure is a **finite field**. A [finite field](https://en.wikipedia.org/wiki/Finite_field) is a mathematical structure that obeys the usual laws of arithmetic, but where there's a limited number of possible values, and so each value can be represented in a fixed size.
 >
 > 补充：有限域是一种数学结构，其包含了有限个元素，域中的元素能够进行加减乘除的运算，且计算后的结果仍是属于这个有限域，因此有限域中的每个元素都可以用固定长度表示。有限域最常见的例子是 modulus $p$ 为素数。我们依然用 modulus = 7 举例，有限域 $F_7$ 包含的元素有 $\{0, 1, 2, 3, 4, 5, 6\}$, 这个域中的每一个元素都是整数，在这个域中任取两个元素进行计算后的结果仍然属于这个域。
-> 
-> 在域中可以定义加、减、乘、除四种运算。例如我们熟知的有理数域、实数域和复数域，但是注意整数并不是一个域，因为两个整数相除之后的结果不一定是整数（例如 $2 / 3$ 不是一个整数 ）。那么有限域是什么呢？就是如果一个域，它的元素个数是有限个，我们就称之为有限域。上述举的有理数域、实数域和复数域，这些域中元素的个数都是无限的，都不是有限域。我们假设一个有限域的大小（即域中元素的个数）为 $q$ ，可以用 $F_q$ 来表示这个有限域，例如 Binius 用到的最简单的一个有限域 $F_2 = \{ 0,1\}$ 。 
+>
+> 在域中可以定义加、减、乘、除四种运算。例如我们熟知的有理数域、实数域和复数域，但是注意整数并不是一个域，因为两个整数相除之后的结果不一定是整数（例如 $2 / 3$ 不是一个整数 ）。那么有限域是什么呢？就是如果一个域，它的元素个数是有限个，我们就称之为有限域。上述举的有理数域、实数域和复数域，这些域中元素的个数都是无限的，都不是有限域。我们假设一个有限域的大小（即域中元素的个数）为 $q$ ，可以用 $F_q$ 来表示这个有限域，例如 Binius 用到的最简单的一个有限域 $F_2 = \{ 0,1\}$ 。
 
 模算术（或**素数域**）是最常见的有限域类型，但也有另一种类型：**扩域**。您之前可能已经看过一个扩域：复数。我们“想象”一个新元素，我们用 $i$ 表示 ，并声明它满足 $i^2=−1$。然后，您可以使用任意的实数和 $i$ 做线性组合 ，并用它做数学运算： $(3i+2)*(2i+4)=6i^2+12i+4i+8=16i+2$ 。我们同样可以对素数域进行扩域。当我们开始处理更小的字段时，素数域的扩域对于保持安全性变得越来越重要，而 Binius 使用的二进制域及其扩域具有非常好的实用性。
 
 > Modular arithmetic (or **prime fields**) is the most common type of finite field, but there is also another type: **extension fields**. You've probably already seen an extension field before: the complex numbers. We "imagine" a new element, which we label $i$, and declare that it satisfies $i^2=−1$. You can then take any combination of regular numbers and $i$, and do math with it: $(3i+2)*(2i+4)=6i^2+12i+4i+8=16i+2$ . We can similarly take extensions of prime fields. As we start working over fields that are smaller, extensions of prime fields become increasingly important for preserving security, and binary fields (which Binius uses) depend on extensions entirely to have practical utility.
 
-- [ ] 扩域是理解 Binius 非常重要的一个部分。这里用我们熟悉的实数域扩域到复数域来说明下扩域这个概念。
+扩域是理解 Binius 非常重要的一个部分。这里用我们熟悉的实数域扩域到复数域来说明下扩域这个概念。
 
-## Recap: arithmetization 
+## Recap: arithmetization
 
 SNARKs 和 STARKs 是通过*算术化(arithmetization)*来证明计算机的程序执行：将你想证明的关于一个程序的*陈述(statement)*转换为涉及多项式的数学方程。方程的有效解就对应程序的有效执行。
 
@@ -110,7 +113,7 @@ $$
 
 > Where $Z(x)=(x-0)*(x-1)*\ldots*(x-98)$. If I can provide valid $F$ and $H$ that satisfy this equation, then $F$ must satisfy $F(x+2)-F(x+1)-F(x)$ across that range. If I additionally verify that $F$ satisfies $F(0)=F(1)=1$ , then $F(100)$ must actually be the 100th Fibonacci number.
 
-- [ ] TODO: 解释一下商多项式
+- TODO: 解释一下商多项式
 
 如果你想证明更复杂的东西，那么你可以用一个更复杂的方程来替换“简单”的关系式 $F(x+2)=F(x)+F(x+1)$，这个方程基本上在说“$F(x+1)$ 是以状态 $F(x)$ 初始化虚拟机并运行一个计算步骤后的输出”。你也可以用一个更大的数字来替换数字 100 ，例如 100000000 ，以容纳更多的步骤。
 
@@ -132,9 +135,9 @@ $$
 
 > STARKs work by treating the data as a polynomial, computing evaluations of that polynomial across a large number of points, and using the Merkle root of that extended data as the "polynomial commitment"
 
-这里一个关键的历史是，基于椭圆曲线的 SNARK 首先被广泛使用：直到 2018 年左右，FRI 出现，STARK 才变得足够高效，而那时 Zcash 已经运行了一年多。基于椭圆曲线的 SNARK 有一个关键限制：如果要使用 SNARK，则这些方程中的算术必须使用椭圆曲线上的点数来模一个整数
+这里一个关键的历史是，基于椭圆曲线的 SNARK 首先被广泛使用：直到 2018 年左右，FRI 出现，STARK 才变得足够高效，而那时 Zcash 已经运行了一年多。基于椭圆曲线的 SNARK 有一个关键限制：~~如果要使用 SNARK，则这些方程中的算术必须使用椭圆曲线上的点数来模一个整数
 *(FIXME: 这句话和本人目前理解的椭圆曲线上的运算不太一致， 需要重新翻译)* 
-来完成。这是一个很大的数字，通常接近 $2^{256}$ ：例如，对于 BN128 曲线，它是 $21888242871839275222246405745257275088548364400416034343698204186575808495617$。但被算数化的程序中往往用到较小数字的频率更多：考虑一个“真实”的程序，它使用的大部分东西都是 counter、for 循环中的索引、程序中的位置、表示 True 或 False 的 bit，以及其他几乎总是只有几位长度的东西。
+来完成。~~ 如果要使用 zk-SNARK，证明中的算术运算必须基于椭圆曲线和有限域上的点，并进行模运算。模运算中的整数（是有限域的阶的因子，素数）很大，通常接近 $2^{256}$ ：例如，对于 BN128 曲线，它是 $21888242871839275222246405745257275088548364400416034343698204186575808495617$。但被算数化的程序中往往用到较小数字的频率更多：考虑一个“真实”的程序，它使用的大部分东西都是 counter、for 循环中的索引、程序中的位置、表示 True 或 False 的 bit，以及其他几乎总是只有几位长度的东西。
 
 > A key bit of history here is that elliptic curve-based SNARKs came into widespread use first: it took until roughly 2018 for STARKs to become efficient enough to use, thanks to [FRI](https://eccc.weizmann.ac.il/report/2017/134/), and by then [Zcash](https://z.cash/) had already been running for over a year. Elliptic curve-based SNARKs have a key limitation: if you want to use elliptic curve-based SNARKs, then the arithmetic in these equations must be done with integers modulo the number of points on the elliptic curve. This is a big number, usually near $2^{256}$: for example, for the bn128 curve, it's $21888242871839275222246405745257275088548364400416034343698204186575808495617$. But the actual computation is using small numbers: if you think about a "real" program in your favorite language, most of the stuff it's working with is counters, indices in for loops, positions in the program, individual bits representing True or False, and other things that will almost always be only a few digits long.
 
@@ -154,7 +157,7 @@ $$
 
 > To continue to be safe, Plonky2 also needed to introduce *extension fields*. A key technique in checking arithmetic equations is "sampling at a random point": if you want to check if $H(x) * Z(x)$ actually equals $F(x+2) - F(x+1) - F(x)$, you can pick some random coordinate $r$, provide *polynomial commitment opening proofs* proving $H(r), Z(r), F(r), F(r+1)$ and $F(r+2)$, and then actually check if $H(r) * Z(r)$ equals $F(r+2) - F(r+1) - F(r)$. If the attacker can guess the coordinate ahead of time, the attacker can trick the proof system - hence why it must be random. But this also means that the coordinate must be sampled from a set large enough that the attacker cannot guess it by random chance. If the modulus is near $2^{256}$, this is clearly the case. But with a modulus of $2^{64} - 2^{32} + 1$, we're not quite there, and if we drop to $2^{31} - 1$, it's *definitely* not the case. Trying to fake a proof two billion times until one gets lucky is absolutely within the range of an attacker's capabilities.
 
->  To stop this, we sample $r$ from an extension field. For example, you can define $y$ where $y^3=5$, and take combinations of 1, $y$ and $y^2$. This increases the total number of coordinates back up to roughly $2^93$. The bulk of the polynomials computed by the prover don't go into this extension field; they just use integers modulo $2^{31} - 1$, and so you still get all the efficiencies from using the small field. But the random point check, and the FRI computation, does dive into this larger field, in order to get the needed security.
+> To stop this, we sample $r$ from an extension field. For example, you can define $y$ where $y^3=5$, and take combinations of 1, $y$ and $y^2$. This increases the total number of coordinates back up to roughly $2^93$. The bulk of the polynomials computed by the prover don't go into this extension field; they just use integers modulo $2^{31} - 1$, and so you still get all the efficiencies from using the small field. But the random point check, and the FRI computation, does dive into this larger field, in order to get the needed security.
 
 ## From small primes to binary
 
@@ -162,11 +165,10 @@ $$
 
 > Computers do arithmetic by representing larger numbers as sequences of zeroes and ones, and building "circuits" on top of those bits to compute things like addition and multiplication. Computers are particularly optimized for doing computation with 16-bit, 32-bit and 64-bit integers. Moduluses like $2^{64} - 2^{32} + 1$ and $2^{31} - 1$ are chosen not just because they fit within those bounds, but also because they *align well* with those bounds: you can do multiplication modulo $2^{64} - 2^{32} + 1$ by doing regular 32-bit multiplication, and shift and copy the outputs bitwise in a few places; [this article](https://xn--2-umb.com/22/goldilocks/) explains some of the tricks well.
 >
-> - [ ] TODO: 计算机 word 对齐
 
 > What would be even better, however, is doing computation in binary directly. What if addition could be "just" XOR, with no need to worry about "carrying" the overflow from adding 1 + 1 in one bit position to the next bit position? What if multiplication could be more parallelizable in the same way? And these advantages would all come on top of being able to represent True/False values with just one bit.
 
-> Capturing these advantages of doing binary computation directly is exactly what Binius is trying to do. A table from the [Binius team's zkSummit presentation](https://docs.google.com/presentation/d/1WuTiof1BiaL6vB50CSeb-hvi5H4j_oqUt19-sZTQEB4/edit#slide=id.g2c9c013854e_0_95) shows the efficiency gains:
+> Capturing these advantages of doing binary computation directly is exactly what Binius is trying to do. A table from the [Binius team&#39;s zkSummit presentation](https://docs.google.com/presentation/d/1WuTiof1BiaL6vB50CSeb-hvi5H4j_oqUt19-sZTQEB4/edit#slide=id.g2c9c013854e_0_95) shows the efficiency gains:
 
 ![](https://vitalik.eth.limo/images/binius/zksummit_slides.png)
 
@@ -179,54 +181,54 @@ $$
 > Suppose that we are convinced by this reasoning, and want to do everything over bits (zeroes and ones). How do we actually commit to a polynomial representing a billion bits?
 
 我们要面对两个问题：
-1. 如果用多项式（polynomial）去表示很多值，那么这些值在多项式的评估（evaluations）时是可访问的：比如前文提到的斐波那契例子 $F(0),\:F(1)\:...\:F(100) ，而在更大规模的计算中， $F(x)$ 的索引会达到数百万。更大的索引需要我们用更大的域来表示。
+
+1. 如果用一个多项式（polynomial）去表示很多值，~~这些值需要在多项式的评估（evaluations）时是可访问的:~~ 比如前文提到的斐波那契例子 $F(0),\:F(1)\:...\:F(100)$ ，而在更大规模的计算中， $F(x)$ 的索引会达到数百万。更大的索引需要我们用更大的域来表示。
 2. 证明我们在Merkle树中承诺的任何值（就像所有的STARKs所做的那样）需要对它进行Reed-Solomon编码：将 $n$ 个值扩展到 $8n$ 个值，利用这种冗余来防止恶意的证明者通过伪造计算中间的一个值来进行欺诈。这也需要有一个足够大的域：为了将一百万的值扩展到八百万，你需要有八百万不同的点来评估多项式。
 
 > Here, we face two practical problems:
+>
 > 1. For a polynomial to represent a lot of values, those values need to be accessible at evaluations of the polynomial: in our Fibonacci example above, $F(0),\:F(1)\:...\:F(100)$, and in a bigger computation, the indices would go into the millions. And the field that we use needs to contain numbers going up to that size.
 > 2. Proving anything about a value that we're committing to in a Merkle tree (as all STARKs do) requires Reed-Solomon encoding it: extending $n$ values into eg. $8n$ values, using the redundancy to prevent a malicious prover from cheating by faking one value in the middle of the computation. This also requires having a large enough field: to extend a million values to 8 million, you need 8 million different points at which to evaluate the polynomial.
 
 Binius 通过两种不同的方式来表示同一组数据，用以分别解决上述的两个问题。首先，基于椭圆曲线的 SNARKs ，2019年的 STARKs，Plonky2 和其他的证明系统通常处理单变量多项式 $F(x)$ 。Binus
-则从 Spartan 协议中获取灵感，使用多变量多项式：$F(x_1,x_2\ldots x_k)$ 。事实上，我们用一个 Hypercube 来表示整个 computational trace ，其中每一个的 $x_i$ 的取值要么是 0 ，要么是 1 。句一个例子，如果我们想要表示一个斐波那契数列，同时我们用一个足够大的域去表示这些数字，我们把前 16 个数字进行可视化后得到
+则从 Spartan 协议中获取灵感，使用“多变量”多项式：$F(x_1,x_2\ldots x_k)$ 。事实上，我们用一个 Hypercube 来表示整个 computational trace ，其中每一个的 $x_i$ 的取值是 0或 1 。举个例子，如果我们想要在一个足够大的域上表示一个斐波那契数列，我们把数列的前 16 个数字表示为下图中的超立方
 
 > A key idea in Binius is solving these two problems separately, and doing so by representing the same data in two different ways. First, the polynomial itself. Elliptic curve-based SNARKs, 2019-era STARKs, Plonky2 and other systems generally deal with polynomials over *one* variable: $F(x)$ . Binius, on the other hand, takes inspiration from the [Spartan](https://eprint.iacr.org/2019/550.pdf) protocol, and works with *multivariate* polynomials: $F(x_1,x_2\ldots x_k)$. In fact, we represent the entire computational trace on the "hypercube" of evaluations where each $x_i$ is either 0 or 1. For example, if we wanted to represent a sequence of Fibonacci numbers, and we were still using a field large enough to represent them, we might visualize the first sixteen of them as being something like this:
 
 ![](https://vitalik.eth.limo/images/binius/hypercube.png)
 
-在这个例子中，“$F(0, 0, 0, 0)$ 为 1，$F(1, 0, 0, 0)$ 也为 1，$F(0, 1, 0, 0)$ 为 2，依此类推，直到 $F(1, 1, 1, 1) = 987$” 表示了一个超立方体中的各个点的取值。对于这样一组取值，存在唯一一个多线性多项式（每个变量的阶为1），可以生成这些值。因此，我们可以用这组取值来代表该多项式；从而无需计算系数。
+在这个例子中，“$F(0, 0, 0, 0)$ 为 1，$F(1, 0, 0, 0)$ 也为 1，$F(0, 1, 0, 0)$ 为 2，依此类推，直到 $F(1, 1, 1, 1) = 987$” 表示了一个超立方体中的各个点的取值。对于这样一组取值，存在唯一一个多元线性多项式（每个变量的阶为1），可以生成这些值。因此，我们可以用这组取值来代表该多项式；从而无需计算系数。
 
 > That is, $F(0, 0, 0, 0)$ would be 1, $F(1, 0, 0, 0)$ would also be 1, $F(0, 1, 0, 0)$ would be 2, and so forth, up until we get to $F(1, 1, 1, 1) = 987$. Given such a hypercube of evaluations, there is exactly one multilinear (degree-1 in each variable) polynomial that produces those evaluations. So we can think of that set of evaluations as representing the polynomial; we never actually need to bother computing the coefficients.
 >
 > 补充：这里也可以理解成一个 key-value pair（键值对），key 是这个 Hypercube 上的所有点，value 是斐波那契数列中的数字，并且如果读者去从右到左去阅读这些点，你会发现这些点和二进制表示的整数是一致的。
+>
 > | hypercube 上的点 | 用十进制整数表示的 Key/Index | Value |
-> | ---- | ---- | ---- |
-> |(0, 0, 0, 0)|0|1|
-> |(1, 0, 0, 0)|1|1|
-> |(0, 1, 0, 0)|2|2|
-> |(1, 1, 0, 0)|3|3|
-> |(0, 0, 1, 0)|4|5|
-> |(1, 0, 1, 0)|5|8|
-> |(0, 1, 1, 0)|6|13|
-> |(1, 1, 1, 0)|7|21|
-> |(0, 0, 0, 1)|8|34|
-> |(1, 0, 0, 1)|9|55|
-> |(0, 1, 0, 1)|10|89|
-> |(1, 1, 0, 1)|11|144|
-> |(0, 0, 1, 1)|12|233|
-> |(1, 0, 1, 1)|13|377|
-> |(0, 1, 1, 1)|14|610|
-> |(1, 1, 1, 1)|15|987|
+> | ---------------- | ---------------------------- | ----- |
+> | (0, 0, 0, 0)     | 0                            | 1     |
+> | (1, 0, 0, 0)     | 1                            | 1     |
+> | (0, 1, 0, 0)     | 2                            | 2     |
+> | (1, 1, 0, 0)     | 3                            | 3     |
+> | (0, 0, 1, 0)     | 4                            | 5     |
+> | (1, 0, 1, 0)     | 5                            | 8     |
+> | (0, 1, 1, 0)     | 6                            | 13    |
+> | (1, 1, 1, 0)     | 7                            | 21    |
+> | (0, 0, 0, 1)     | 8                            | 34    |
+> | (1, 0, 0, 1)     | 9                            | 55    |
+> | (0, 1, 0, 1)     | 10                           | 89    |
+> | (1, 1, 0, 1)     | 11                           | 144   |
+> | (0, 0, 1, 1)     | 12                           | 233   |
+> | (1, 0, 1, 1)     | 13                           | 377   |
+> | (0, 1, 1, 1)     | 14                           | 610   |
+> | (1, 1, 1, 1)     | 15                           | 987   |
 
-这个只是一个简化的例子：在实践中，使用 Hypercube 的真正目的是让我们能够处理单个比特。用“Binius-native” 方式来计算斐波那契数的话，会使用更高维的立方体，例如用每组16个比特来存储一个数字。
+这个只是一个简化的例子：在实践中，使用 Hypercube 的真正目的是让我们能够处理单个比特。用“Binius-native” 方式来计算斐波那契数的话，会使用更高维的超立方体，例如用每组16个比特来存储一个数字，这在binius中不难实现。
 
-- [ ] FIXME: 这需要一些巧妙的方法来实现这些bits的整数加法 ，
-
-但使用Binius来实现这一点并不太困难。
+- [ ] FIXME: 这需要一些巧妙的方法来实现这些bits的整数加法，但使用Binius来实现这一点并不太困难。
 
 > This example is of course just for illustration: in practice, the whole point of going to a hypercube is to let us work with individual bits. The "Binius-native" way to count Fibonacci numbers would be to use a higher-dimensional cube, using each set of eg. 16 bits to store a number. This requires some cleverness to implement integer addition on top of the bits, but with Binius it's not too difficult.
 
-
-现在，我们来讨论纠删码。STARKs 的工作方式是：你取 $n$ 个值，通过 Reed-Solomon 编码将它们扩展到更多的值（通常是 $8n$，一般在 $2n$ 到 $32n$ 之间），然后从扩展的数据中随机选择一些 Merkle 分支并进行某种检查。一个超立方体在每个维度的长度为 2。因此，直接扩展它是不切实际的：从 16 个值中抽样 Merkle 分支的“空间”不足。那么我们该怎么办呢？我们假装超立方体是一个方块！
+现在，我们来讨论纠删码。STARKs 的工作方式是：你取 $n$ 个值，通过 Reed-Solomon 编码将它们扩展到更多的值（通常是 $8n$，一般在 $2n$ 到 $32n$ 之间），然后从扩展的数据中随机选择一些 Merkle 分支并进行某种检查。一个超立方体在每个维度的长度为 2。因此，直接扩展它是不切实际的：从 16 个值中抽样 Merkle 分支的“空间”不足。那么我们该怎么办呢？我们假装超立方体是一个方阵！
 
 > Now, we get to the erasure coding. The way STARKs work is: you take $n$ values, Reed-Solomon extend them to a larger number of values (often $8n$, usually between $2n$ and $32n$), and then randomly select some Merkle branches from the extension and perform some kind of check on them. A hypercube has length 2 in each dimension. Hence, it's not practical to extend it directly: there's not enough "space" to sample Merkle branches from 16 values. So what do we do instead? We pretend the hypercube is a square!
 
@@ -234,49 +236,50 @@ Binius 通过两种不同的方式来表示同一组数据，用以分别解决�
 
 *See* *[here](https://github.com/ethereum/research/blob/master/binius/simple_binius.py) for a python implementation of this protocol.*
 
-让我们用一个新的例子，为了方便起见，我们使用整数域（在实际的 Binius 实现中使用的是二进制域）。首先，我们获取要承诺的 Hypercube，并将其编码为方块：
+让我们看一个新的例子，为了方便起见，我们使用整数域（在实际的 Binius 实现中使用的是二进制域）。首先，我们获取要承诺的超立方体Hypercube，并将其编码为一个方阵：
 
 > Let's go through an example, using regular integers as our field for convenience (in a real implementation this will be binary field elements). First, we take the hypercube we want to commit to, and encode it as a square:
 
 ![](https://vitalik.eth.limo/images/binius/basicbinius1.drawio.png)
 
-现在我们使用里德所罗门编码去扩展这个方块，我们把每一行看成一个 3 阶多项式，并将行中的数字视为多项式在 $x = {0, 1, 2, 3}$ 上的取值，然后取这个多项式在 $x = {4, 5, 6, 7}$ 上的取值。
+现在我们使用里德所罗门编码去扩展这个方阵，我们把每一行看成一个 3 阶多项式，并将行中的数字视为多项式在 $x = {0, 1, 2, 3}$ 上的取值，然后求这个多项式在 $x = {4, 5, 6, 7}$ 上的取值。
 
 > Now, we Reed-Solomon extend the square. That is, we treat each row as being a degree-3 polynomial evaluated at $x = {0, 1, 2, 3}$, and evaluate the same polynomial at $x = {4, 5, 6, 7}$:
 >
-> 补充：以图中的第一行为例，让 $x = {0, 1, 2, 3}$ 作为输入，第一行中的四个值 $y = {3, 1, 4, 1}$ 作为输出。于是我们有点对 $(x=0, y=3), (x=1, y=1), (x=2, y=4), (x=1, y=1)$ ，计算其拉格朗日多项式，得到 $\frac{(x-1)(x-2)(x-3)}{-2} + \frac{x(x-2)(x-3)}{2} + 2x(x-1)(x-3) + \frac{x(x-1)(x-2)}{6}$ ，然后带入 $x = {4, 5, 6, 7}$ 到这个多项式中，得到 $y={-19, -67, -154, -291}$ 即图中右侧方块的第一行
+> 补充：以图中的第一行为例，让 $x = {0, 1, 2, 3}$ 作为输入，第一行中的四个值 $y = {3, 1, 4, 1}$ 作为输出。于是我们有点对 $(x=0, y=3), (x=1, y=1), (x=2, y=4), (x=1, y=1)$ ，计算其拉格朗日多项式，得到 $\frac{(x-1)(x-2)(x-3)}{-2} + \frac{x(x-2)(x-3)}{2} + 2x(x-1)(x-3) + \frac{x(x-1)(x-2)}{6}$ ，然后带入 $x = {4, 5, 6, 7}$ 到这个多项式中，得到 $y={-19, -67, -154, -291}$ 即图中右侧方阵的第一行
 
 ![](https://vitalik.eth.limo/images/binius/basicbinius.drawio.png)
 
-注意到数字的增长是非常快的，这也是我们总是在实际应用中采用有限域的原因。比如，我们采用 11 做为模，那么第一行的扩展会是 $[3, 10, 0, 6]$ 。
+注意到y值得增长是非常快的，这也是我们总是在实际应用中采用有限域的原因。比如，我们采用 11 做为模，那么第一行的扩展会是 $[3, 10, 0, 6]$ 。
 
 > Notice that the numbers blow up quickly! This is why in a real implementation, we always use a finite field for this, instead of regular integers: if we used integers modulo 11, for example, the extension of the first row would just be $[3, 10, 0, 6]$.
 
-你可以使用该链接里的 [代码](https://github.com/ethereum/research/blob/master/binius/utils.py#L123) 来进行验证。
+你可以使用该链接里的 [代码](https://github.com/ethereum/research/blob/master/binius/utils.py#L123) 来验证上述的扩展。
 
 > If you want to play around with extending and verify the numbers here for yourself, you can use [my simple Reed-Solomon extension code here](https://github.com/ethereum/research/blob/master/binius/utils.py#L123).
 
-接下来，从列的方向上来处理扩展后的方块，并且生成一个默克尔树，这个树的根节点就是我们的承诺
+接下来，我们从列的方向上来处理扩展后的方阵，并且生成一个默克尔树，这个树的根节点就是我们的承诺
 
 > Next, we treat this extension as columns, and make a Merkle tree of the columns. The root of the Merkle tree is our commitment.
 
 ![](https://vitalik.eth.limo/images/binius/binius_merkletree.drawio.png)
 
-现在，我们假设 P 想要去证明这个多项式在某一个随机点上的取值 $r = (r_0, r_1, r_2, r_3)$，在  Binius 中，有一个细微的不同导致了其比其他的多项式承诺稍微弱一点，即 P 不应该在承诺默克尔根之前就知道或有能力猜到这个随机值 $r$ 。换句话说 $r$ 应该是一个依赖默克尔根的伪随机数。这使得该方案对
+现在，我们假设 Prover想要去证明这个多项式在某一个随机点上的取值 $r = (r_0, r_1, r_2, r_3)$，在  Binius 中，有一个细微的不同导致了binius比其他的多项式承诺稍微弱一点，即 Prover 不应该在承诺默克尔根之前就知道或有能力猜到这个随机值 $r$ 。换句话说 $r$ 应该是一个依赖默克尔根的伪随机数。这使得该方案对
+
 - [ ] FIXME: "database lookup"
-（举例：你给了我默克尔树的根，现在向我证明 $P(0, 0, 1, 0)$ ）毫无用处。但通常来说，我们使用的证明系统们通常不需要
+  （举例：你给了我默克尔树的根，现在向我证明 $P(0, 0, 1, 0)$ ）毫无用处。但通常来说，我们使用的证明系统们通常不需要。
 - [ ] FIXME: "database lookup"
-这一特性，它们通常只需要检查多项式在一个随机点上的取值就好了，因此这个限制不会影响到我们要做的事情
+  这一特性，它们通常只需要检查多项式在一个随机点上的取值就好了，因此这个限制不会影响到我们要做的事情。
 
 > Now, let's suppose that the prover wants to prove an evaluation of this polynomial at some point $r = (r_0, r_1, r_2, r_3)$. There is one nuance in Binius that makes it somewhat weaker than other polynomial commitment schemes: the prover should not know, or be able to guess, $s$, until after they committed to the Merkle root (in other words, $r$ should be a pseudo-random value that depends on the Merkle root). This makes the scheme useless for "database lookup" (eg. "ok you gave me the Merkle root, now prove to me $P(0, 0, 1, 0)$ !"). But the actual zero-knowledge proof protocols that we use generally don't need "database lookup"; they simply need to check the polynomial at a random evaluation point. Hence, this restriction is okay for our purposes.
 
-假设我们选取随机点 $r=\{1,2,3,4\}$ (多项式在该点的取值为 -137，可以用[这里的代码](https://github.com/ethereum/research/blob/master/binius/utils.py#L100)进行确认)。现在让我们来看一下 Proof 的生成过程，我们把 $r$ 分解成两个部份：第一个部份是 $\{1,2\}$ 表示对一个行中的列元素做线性组合，第二个部份 $\{3,4\}$ 表示对行做线性组合，
+假设我们选取随机点 $r=\{1,2,3,4\}$ (多项式在该点的取值为 -137，可以用[这里的代码](https://github.com/ethereum/research/blob/master/binius/utils.py#L100)进行确认)。现在让我们来看一下 Proof 的生成过程，我们把 $r$ 分解成两个部分：第一个部分是 $\{1,2\}$ 表示对同一行中的列元素做线性组合，第二个部分 $\{3,4\}$ 表示对多个行做线性组合。
 
-> Suppose we pick $r=\{1,2,3,4\}$ (the polynomial, at this point, evaluates to −137; you can confirm it [with this code](https://github.com/ethereum/research/blob/master/binius/utils.py#L100)). Now, we get into the process of actually making the proof. We split up $r$ into two parts: the first part $\{1,2\}$ representing a linear combination of *columns within a row*, and the second part $\{3,4\}$ representing a linear combination *of rows*. 
+> Suppose we pick $r=\{1,2,3,4\}$ (the polynomial, at this point, evaluates to −137; you can confirm it [with this code](https://github.com/ethereum/research/blob/master/binius/utils.py#L100)). Now, we get into the process of actually making the proof. We split up $r$ into two parts: the first part $\{1,2\}$ representing a linear combination of *columns within a row*, and the second part $\{3,4\}$ representing a linear combination *of rows*.
 >
-> 补充：这里的多项式指的是用本小节用的 Hypercube 上的点和其对应值计算出来的 MLE ，因为这个 Hypercube 是4维的，所以上面有16个点，对应着一个 4 变量多项式，$P(x_1, x_2, x_3, x_4)$
+> 补充：这里的多项式指的是用本小节用的 Hypercube 上的点和其对应值计算出来的 MLE（多元线性扩展），因为这个 Hypercube 是4维的，所以上面有16个点，对应着一个 四元线性多项式，$P(x_1, x_2, x_3, x_4)$
 
-我们对列的计算其张量积
+我们先计算列间的张量积
 
 > We compute a "tensor product", both for the column part:
 
@@ -284,7 +287,7 @@ $$
 \bigotimes_{i=0}^1(1-r_i,r_i)
 $$
 
-对于行的部份
+对于行间的张量积
 
 > And for the row part:
 
@@ -292,11 +295,11 @@ $$
 \bigotimes_{i=2}^3(1-r_i,r_i)
 $$
 
-张量积意味着：取每一个集合中的元素相乘，并把所有的结果给写出来
+张量积意味着：取每一个集合中的每个元素与另一个集合中的每个元素相乘，并把所有的结果给写出来
 
 > What this means is: a list of all possible products of one value from each set.
 
-，在行的情形中，我们有：
+在行的情形中，我们有：
 
 > In the row case, we get:
 
@@ -307,24 +310,24 @@ $$
 > 补充：先不要去管左边的 $\bigotimes$ 符号，把目光放在 $(1-r_i,r_i)$ 上，代入 $i$ 所有可能的取值 $i = 2, 3$ ，我们得到两个数对 $(1 - r_2, r_2),(1 - r_3, r_3)$ ，然后我们取第一个数对中的元素和第二个数对中的元素，并把它们乘起来，有：
 >
 > $(1 - r_2) \times (1 - r_3)$
-> 
+>
 > $r_2 \times (1 - r_3)$
-> 
+>
 > $(1 - r_2) \times r_3$
-> 
+>
 > $r_2 \times r_3$
 >
-> 把上面得出的四个结果写到一个列表里面，我们就得到了上面的式子 
+> 把上面得出的四个结果写到一个列表里面，我们就得到了上面的式子
 
-使用  $r={1,2,3,4}$  ，取 $r_2 = 3$ and $r_3 = 4$ ：
+使用  $r= \{1,2,3,4\} $ ，则 $r_2 = 3$ and $r_3 = 4$ ：
 
-> Using $r={1,2,3,4}$ (so $r_2 = 3$ and $r_3 = 4$):
+> Using $r=\{1,2,3,4\}$ (so $r_2 = 3$ and $r_3 = 4$):
 
 $$
 [(1-3)\times (1-4),3\times (1-4),(1-3)\times 4,3\times 4]=[6,-9,-8,12]
 $$
 
-现在 通过对现有的行计算其线性组合，我们得到了一个新行 $t'$ ：
+现在,我们计算现有行间的线性组合，得到了一个新行 $t'$ ：
 
 > Now, we compute a new "row" $t'$, by taking this linear combination of the existing rows. That is, we take:
 
@@ -338,23 +341,23 @@ $$
 \end{align*}
 $$
 
-你现在可以把这个操作堪称部份求值，如果我们去计算完整的张量积，你就会得到 $P(1,2,3,4)=-137$ ，在这里，我们将仅使用一半坐标的偏张量乘积相乘，并将 N 个值的方阵规约为一行 （ $\sqrt{N}$ 个值）。如果你把此行提供给其他人，他们可以用另一半的求值坐标的张量积来完成剩下的计算。
+你现在可以把这个操作作为一个部分求值。如果我们将计完整的张量积$\bigotimes_{i=0}^3(1-r_i,r_i)$乘以完整向量的元素值，我们会得到 $P(1,2,3,4)=-137$ 。在这里，我们仅使用一半的求值坐标来计算部分张量积，并将 N 个值的方阵规约为一行 （ $\sqrt{N}$ 个值）。如果你把此行给其他人，他们可以用另一半的求值坐标的张量积来完成剩下的计算。
 
 > You can view what's going on here as a partial evaluation. If we were to multiply the full tensor product $\bigotimes_{i=0}^3(1-r_i,r_i)$ by the full vector of all values, you would get the evaluation $P(1,2,3,4)=-137$ . Here we're multiplying a *partial* tensor product that only uses half the evaluation coordinates, and we're reducing a grid of $N$ values to a row of $\sqrt{N}$ values. If you give this row to someone else, they can use the tensor product of the other half of the evaluation coordinates to complete the rest of the computation.
 
-P 向 V 提供刚刚计算得出的新行 $t'$ ，同时提供一些随机抽样列的 Merkle 证明。其空间复杂度为 $O(\sqrt{N})$ 。在本例中，我们让 P 只提供最后一列；而在实际应用中，P 需要提供给 V 更多的列来达到更好的安全性。
+Prover 向 Verifier提供刚刚计算得出的新行 $t'$ ，同时提供一些随机抽样列的 Merkle 证明, 其空间复杂度为 $O(\sqrt{N})$ 。在本例中，我们让 Prover 只提供最后一列；而在实际应用中，Prover 需要提供给 Verifier 更多的列来达到更好的安全性。
 
 > The prover provides the verifier with this new row, $t'$, as well as the Merkle proofs of some randomly sampled columns. This is $O(\sqrt{N})$ data. In our illustrative example, we'll have the prover provide just the last column; in real life, the prover would need to provide a few dozen columns to achieve adequate security.
-> 
+>
 > - [ ] TODO: 实际应用中要提供多少列才能达到安全，如果未提供足量的列会导致什么样的安全问题？
 
-现在，我们利用 Reed-Solomon 的线性特性，其关键是：对 ”Reed-Solomon 扩展做线性组合“的结果等于“对线性组合做Reed-Solomon 扩展”，这种运算顺序的非相关性往往在两个运算都是线性运算时出现。
+现在，我们利用 Reed-Solomon 的线性特性，其关键是：对 "Reed-Solomon 扩展的做线性组合"的结果等于“对线性组合后做Reed-Solomon 扩展”的结果，这种运算顺序的非相关性往往在两个运算都是线性运算时出现。
 
 > Now, we take advantage of the linearity of Reed-Solomon codes. The key property that we use is: **taking a linear combination of a Reed-Solomon extension gives the same result as a Reed-Solomon extension of a linear combination**. This kind of "order independence" often happens when you have two operations that are both linear.
 >
 > 补充：即 $f(g(x)) = g(f(x))$
 
-V 正是这样做的。他们计算了 $t'$ 的扩展，并且用同样的系数对 P 提供的列计算线性组合，并验证这两个过程是否给出相同的答案。
+Verifier 正是这样做的。他们计算了 $t'$ 的扩展，并且用同样的系数对 P 提供的列计算线性组合，并验证这两个过程是否给出相同的答案。
 
 > The verifier does exactly this. They compute the extension of $t'$, and they compute the same linear combination of columns that the prover computed before (but only to the columns provided by the prover), and verify that these two procedures give the same answer.
 >
@@ -362,13 +365,13 @@ V 正是这样做的。他们计算了 $t'$ 的扩展，并且用同样的系数
 
 ![](https://vitalik.eth.limo/images/binius/basicbinius2.drawio.png)
 
-在本例中，计算 $t'$ 的扩展，和对图中标记的竖列做线性组合，两者给出了相同的答案：-10746。这证明默克尔的根是「善意」构建的 ( 或者至少「足够接近」)，而且它是匹配 t 的：至少绝大多数列是相互兼容的。
+在本例中，计算 $t'$ 的扩展，和对图中标记的列做线性组合，两者给出了相同的答案：-10746。这证明默克尔的根是「善意」构建的 ( 或者至少「足够接近」)，而且它是匹配 t 的：至少绝大多数列是相互兼容的。
 
 > In this case, extending $t'$, and computing the same linear combination $([6,-9,-8,12])$ of the column, both give the same answer: $-10746$ . This proves that the Merkle root was constructed "in good faith" (or it at least "close enough"), and it matches $t'$ : at least the great majority of the columns are compatible with each other and with $t'$.
 >
 > - [ ] TODO: 这里和默克尔树的关联还是不够明显
 
-到这里 V 还需要再检查一点东西：检查多项式 在 $r = \{r0, \ldots, r3\}$ 的取值。到目前为止，验证者的所有步骤实际上都没有依赖于证明者声称的值。我们是这样检查的。我们对 $t'$ 用前文提到的"column part"张量积的计算结果进行线性组合：
+到这里 Verifier 还需要再检查一点东西：检查多项式 在 $r = \{r_0, \ldots, r_3\}$ 的取值。到目前为止，验证者的所有步骤实际上都没有依赖于证明者声称的值。我们是这样检查的。我们将评估点的“列部分”进行张量积运算:
 
 > But the verifier still needs to check one more thing: actually check the evaluation of the polynomial at $\{r_0..r_3\}$ . So far, none of the verifier's steps actually depended on the value that the prover claimed. So here is how we do that check. We take the tensor product of what we labelled as the "column part" of the evaluation point:
 
@@ -376,7 +379,7 @@ $$
 \bigotimes_{i=0}^1(1-r_i,r_i)
 $$
 
-在我们的例子中，我们取 r 的前半部份，即 $\{1, 2\}$ ，有：
+在我们的例子中，取 $r=\{1,2,3,4\}$ 的前半部份，即 $\{1, 2\}$ ，带入上式有：
 
 > In our example, where $r=\{1,2,3,4\}$ (so the half that chooses the column is $\{1, 2\}$ ), this equals:
 
@@ -385,13 +388,14 @@ $$
 $$
 
 然后我们用刚才计算出来的结果计算 $t'$ 的线性组合
+
 > So now we take this linear combination of $t'$ :
 
 $$
 0\times 41+(-1)\times (-15)+0\times 74+2\times (-76)=-137
 $$
 
-这和你直接把 $r=\{1,2,3,4\}$ 带入到多项式后计算出来的结果是一致的。
+这和你直接把 $r=\{1,2,3,4\}$ 带入到多项式中得到的结果一致。
 
 > Which exactly equals the answer you get if you evaluate the polynomial directly.
 >
@@ -403,27 +407,27 @@ $$
 
 ## Binary fields
 
-最小的有限域是模为 2 的有限域，用 $F_2$ 表示，这是在 $F_2$ 上的加法和乘法表：
+最小的有限域是模为 2 的有限域$F_2$，这是在 $F_2$ 上的加法和乘法表：
 
 > The smallest possible field is arithmetic modulo 2, which is so small that we can write out its addition and multiplication tables:
 
-|**+**|**0**|**1**|     |**\***|**0**|**1**|
-|---- |---- |---- |---- |----  |---- |---- |
-|**0**|0    |1    |     |**0** |0    |0    |
-|**1**|1    |0    |     |**1** |0    |1    |
+| **+** | **0** | **1** |  | **\*** | **0** | **1** |
+| ----------- | ----------- | ----------- | - | ------------ | ----------- | ----------- |
+| **0** | 0           | 1           |  | **0**  | 0           | 0           |
+| **1** | 1           | 0           |  | **1**  | 0           | 1           |
 
-通过扩展，我们能够得到一个更大的二进制域：我们对 $F_2$ （模为 2）进行扩域，定义 $x$ ,  其是方程 $x^2=x+1$ 的根，我们可以得到如下的加法乘法表
+通过扩展，我们能够得到一个更大的二进制域：我们对 $F_2$ （模为 2）进行扩域，定义方程 $x^2=x+1$ 的根$x$ ，我们可以得到如下的加法表和乘法表
 
 > We can make larger binary fields by taking extensions: if we start with $F_2$ (integers modulo 2) and then define $x$ where $x^2=x+1$, we get the following addition and multiplication tables:
 
-|**+**  |**0**|**1**|**x**|**x+1**| |**\*** |**0**|**1**|**x**|**x+1**|
-|----   |---- |---- |---- |----   |-|----   |---- |---- |---- |----   |
-|**0**  |0    |1    |x    |x+1    | |**0**  |0    |0    |0    |0      |
-|**1**  |1    |0    |x+1  |x      | |**1**  |0    |1    |x    |x+1    |
-|**x**  |x    |x+1  |0    |1      | |**x**  |0    |x    |x+1  |1      |
-|**x+1**|x+1  |x    |1    |0      | |**x+1**|0    |x+1  |1    |x      |
+| **+**   | **0** | **1** | **x** | **x+1** |  | **\***  | **0** | **1** | **x** | **x+1** |
+| ------------- | ----------- | ----------- | ----------- | ------------- | - | ------------- | ----------- | ----------- | ----------- | ------------- |
+| **0**   | 0           | 1           | x           | x+1           |  | **0**   | 0           | 0           | 0           | 0             |
+| **1**   | 1           | 0           | x+1         | x             |  | **1**   | 0           | 1           | x           | x+1           |
+| **x**   | x           | x+1         | 0           | 1             |  | **x**   | 0           | x           | x+1         | 1             |
+| **x+1** | x+1         | x           | 1           | 0             |  | **x+1** | 0           | x+1         | 1           | x             |
 
-通过反复使用上述的技巧，我们可以把一个二进制域扩展到任意大的域。与实数域扩展到负数域不同，在引入虚数 $i$ 之后，你便不能再添加新的元素到复数域中（当然四元数是一个复数的扩域，不过其不满足交换率）。在有限域的的情形中，你总是能进行扩域的操作，每次扩域时，我们使用如下定义的元素。
+通过反复使用上述的技巧，我们可以把一个二进制域扩展到任意大的域。与实数域扩展到复数域不同，在引入虚数 $i$ 之后，你便不能再添加新的元素到复数域中（当然四元数是一个复数的扩域 [quaternions](https://en.wikipedia.org/wiki/Quaternion)，不过其不满足交换率, eg. $ab\neq ba$）。在有限域的的情形中，你总是能进行扩域的操作，每次扩域时，我们使用如下定义的元素。
 
 > It turns out that we can expand the binary field to arbitrarily large sizes by repeating this construction. Unlike with complex numbers over reals, where you can add *one* new element $i$, but you can't add any more ([quaternions](https://en.wikipedia.org/wiki/Quaternion) do exist, but they're mathematically weird, eg. $ab\neq ba$ ), with finite fields you can keep adding new extensions forever. Specifically, we define elements as follows:
 
@@ -432,21 +436,23 @@ $$
 - $x_2$ satisfies $x_2^2=x_1x_2+1$
 - $x_3$ satisfies $x_3^2=x_3x_2+1$
 
-> 补充： 
-> - $x_0^2=x_0+1$ 的解在 $F_2$ 上不存在，通过把这个解添加到 $F_2$ 中，该方程变得有解，域则因为添加操作而变成了一个新的更大的域，此时一次扩域完成。
-> - - [ ] $x_1, x_2, \ldots$ 像上面这样定义的原因
+> 补充：
+>
+> - $x_0^2=x_0+1$ 的解在 $F_2$ 上不存在，通过把这个解添加到 $F_2$ ，得到一个更大的域，即完成一次扩域，该方程在新的域上有解。
+> - [todo] $x_1, x_2, \ldots$ 像上面这样定义的原因
 > - Vitalik 这里指的是，复数域是最大的代数域，你无法再通过代数扩张的方式得到一个比复数域还要大的域，且四元数不在我们讨论的范围内
 > - 实数域，复数域的元素有无穷多个，是无限域。
 > - 扩域：通过对原有域中引入一个新的元素，并将这个元素和原域中的所有元素做线性组合，所得出的全部结果就是这个扩域后的全部域元素，
-> - - [ ] 扩域的形式定义 a+bx 及简短解释，基的定义
+> - [todo] 扩域的形式定义 a+bx 及简短解释，基的定义
 > - 以 $F_2$ 到 $F_{2^2}$ 的扩域为例，当扩域只引入了一个元素时，你可以把原域的元素铺成一个横轴和一个纵轴，如下表左侧，然后对纵轴上的每个数字都乘上被引入的新元素（如右侧）得到的值再和横轴的数字做加法，即可得到 $F_{2^2}$ 中的全部元素
-> 
-> > | $F_2$ | $0$     | $1$     |   | $F_{2^2}$      | $0$                | $1$                |
-> > | ---   |---      |---      |---|---             |---                 |---                 |
-> > | $0$   | $(0,0)$ | $(0,1)$ |==>| $0 \times x_0$ | $0 \times x_0 + 0$ | $0 \times x_0 + 1$ |
-> > | $1$   | $(1,0)$ | $(1,1)$ |   | $1 \times x_0$ | $1 \times x_0 + 0$ | $1 \times x_0 + 1$ |
+>
+>> | $F_2$ | $0$     | $1$     |     | $F_{2^2}$      | $0$                | $1$                |
+>> | ------- | --------- | --------- | --- | ---------------- | -------------------- | -------------------- |
+>> | $0$   | $(0,0)$ | $(0,1)$ | ==> | $0 \times x_0$ | $0 \times x_0 + 0$ | $0 \times x_0 + 1$ |
+>> | $1$   | $(1,0)$ | $(1,1)$ |     | $1 \times x_0$ | $1 \times x_0 + 0$ | $1 \times x_0 + 1$ |
+>>
 
-以此类推，这个扩域方式通常被叫做塔结构，因为每一次扩域就像是给这个塔加了新的一层一半，这当然不是唯一的二进制扩域形式，但是塔结构有着自己独到的优点，Binius 正是利用到了这些点
+以此类推，这个扩域方式通常被叫做**塔结构**，因为每一次扩域就像是给这个塔加了新的一层，这当然不是唯一的二进制扩域形式，但是塔结构有着自己独到的优点，Binius 正是利用到了这些优点。
 
 > And so on. This is often called the **tower construction**, because of how each successive extension can be viewed as adding a new layer to a tower. This is not the only way to construct binary fields of arbitary size, but it has some unique advantages that Binius takes advantage of.
 
@@ -465,33 +471,35 @@ $$
 > 补充
 >
 > $F_2$ 中有一个基 $1$ ，通过 $x_0$ 扩域后，
-> | $F_{2}$ | $1$ |
-> |--|--|
-> |用 $x_0$ 扩域，生成新的基 | $x_0$ |
-> 
+>
+> | $F_{2}$                  | $1$   |
+> | -------------------------- | ------- |
+> | 用$x_0$ 扩域，生成新的基 | $x_0$ |
+>
 > 得到 $F_{2^2}$有 2 个基：$1, x_0$，通过 $x_1$ 扩域后：
-> 
-> | $F_{2^2}$ | $1$ | $x_0$ |
-> |--|--|--|
-> |用 $x_1$ 扩域，生成新的基 | $x_1$ | $x_1x_0$|
+>
+> | $F_{2^2}$                | $1$   | $x_0$    |
+> | -------------------------- | ------- | ---------- |
+> | 用$x_1$ 扩域，生成新的基 | $x_1$ | $x_1x_0$ |
 >
 > 得到 $F_{2^{2^2}}$，有 4 个基： $1, x_0, x_1, x_1x_0$ , 我们继续通过 $x_2$ 扩域:
-> | $F_{2^{2^2}}$ | $1$ | $x_0$ | $x_1$ | $x_1x_0$|
-> |--|--|--|--|--|
-> |用 $x_2$ 扩域，生成新的基 | $x_2$ | $x_2x_0$ | $x_2x_1$ | $x_2x_1x_0$ |
-> 
+>
+> | $F_{2^{2^2}}$            | $1$   | $x_0$    | $x_1$    | $x_1x_0$    |
+> | -------------------------- | ------- | ---------- | ---------- | ------------- |
+> | 用$x_2$ 扩域，生成新的基 | $x_2$ | $x_2x_0$ | $x_2x_1$ | $x_2x_1x_0$ |
+>
 > 得到 $F_{2^{2^3}}$ ， 有 8 个基，即 $1, x_0, x_1, x_1x_0, x_2, x_2x_0, x_2x_1, x_2x_1x_0$ ，不难发现，每一次扩域新增加的基是通过原有的每一个基 “乘上” 新元素得到的。
-> 
-> 在这里基的个数对应着能够表达的比特位个数，那当我们通过 $x_3$ 扩域后，我们就可以用这个域来表示一个 16 bit 的数字。对应原文中的例子，有：
-> 
-> | 原文中的例子 |1 |1 |0 |0 |1 |0 |1 |0 |1 |0 |0 |0 |1 |1 |1 |1 |
-> |--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|--|
-> |对应的基|1| $x_0$ | $x_1$ | $x_1x_0$ | $x_2$ | $x_2x_0$ | $x_2x_1$ | $x_2x_1x_0$ | $x_3$ | $x_3x_0$ | $x_3x_1$ | $x_3x_1x_0$ | $x_3x_2$ | $x_3x_2x_0$ | $x_3x_2x_1$ | $x_3x_2x_1x_0$ |
-> |基对应的整数|1|2|4|8|16|32|64|128|256|512|1024|2048|4096|8192|16384|32768|
-> 
-> 那么不难理解，一个 16 bit的数字按照一次扩域的定义 $a + bx_i$ 展开，我们有 $11001010+10001111 \times x_3$ 。
+>
+> 在这里基的个数对应着能够表达的比特位个数，那当我们通过 $x_3$ 扩域后，我们就可以用这个域来表示一个 16 bits 的数字。对应原文中的例子，有：
+>
+> | 原文中的例子 | 1 | 1       | 0       | 0          | 1       | 0          | 1          | 0             | 1       | 0          | 0          | 0             | 1          | 1             | 1             | 1                |
+> | ------------ | - | ------- | ------- | ---------- | ------- | ---------- | ---------- | ------------- | ------- | ---------- | ---------- | ------------- | ---------- | ------------- | ------------- | ---------------- |
+> | 对应的基     | 1 | $x_0$ | $x_1$ | $x_1x_0$ | $x_2$ | $x_2x_0$ | $x_2x_1$ | $x_2x_1x_0$ | $x_3$ | $x_3x_0$ | $x_3x_1$ | $x_3x_1x_0$ | $x_3x_2$ | $x_3x_2x_0$ | $x_3x_2x_1$ | $x_3x_2x_1x_0$ |
+> | 基对应的整数 | 1 | 2       | 4       | 8          | 16      | 32         | 64         | 128           | 256     | 512        | 1024       | 2048          | 4096       | 8192          | 16384         | 32768            |
+>
+> 那么不难理解，一个 16 bits的数字按照一次扩域的定义 $a + bx_i$ 展开，我们有 $11001010+10001111 \times x_3$ 。
 
-这是一种相对不常见的表示法，但我喜欢将二进制字段元素表示为整数，采用更有效 bit 在右侧的位表示。也就是说，$1=1, x_0=01=2,1+x_0=11=3,1+x_0+x_2=11001000=19$, 等等。上个例子中的 $1100101010001111$ 是 61779。
+这是一种相对不常见的表示法，但我喜欢**将二进制字段元素表示为整数，采用更有效 bit 在右侧的位表示**。也就是说，$1=1, x_0=01=2,1+x_0=11=3,1+x_0+x_2=11001000=19$, 等等。上个例子中的 $1100101010001111$ 是 61779。
 
 > This is a relatively uncommon notation, but I like representing binary field elements as integers, taking the bit representation where more-significant bits are to the right. That is, $1=1, x_0=01=2,1+x_0=11=3,1+x_0+x_2=11001000=19$ , and so forth. $1100101010001111$ is, in this representation, $61779$.
 
@@ -512,21 +520,22 @@ $$
 x\times y=(L_x\times L_y)+(L_x\times R_y)\times x_k+(R_x\times L_y)\times x_k+(R_x\times R_y)\times x_k^2
 $$
 
-最后一部分是唯一有点棘手的，因为你必须应用 “reduction rule”。有更有效的方法来做乘法，类似于 Karatsuba 算法和快速傅里叶变换，但我将把它作为一个练习留给有兴趣的读者去弄清楚。
+最后一部分是唯一有点棘手的，因为你必须应用 “reduction rule”。有更有效的方法来做乘法，类似于 [Karatsuba algorithm](https://en.wikipedia.org/wiki/Karatsuba_algorithm) 算法和[快速傅里叶变换](https://vitalik.eth.limo/general/2019/05/12/fft.html)，但我将把它作为一个练习留给有兴趣的读者去弄清楚。
 
 > The last piece is the only slightly tricky one, because you have to apply the reduction rule, and replace $R_x*R_y*x_k^2$ with $R_x*R_y*(x_{k-1}*x_k+1)$ . There are more efficient ways to do multiplication, analogues of the [Karatsuba algorithm](https://en.wikipedia.org/wiki/Karatsuba_algorithm) and [fast Fourier transforms](https://vitalik.eth.limo/general/2019/05/12/fft.html), but I will leave it as an exercise to the interested reader to figure those out.
 
 二进制字段中的除法是通过结合乘法和倒数来完成的。一个简单的倒数算法应用了广义费马小定理。还有一个更复杂但更有效的反演算法，你可以在 [这里](https://ieeexplore.ieee.org/document/612935) 。你可以使用[这里](https://github.com/ethereum/research/blob/master/binius/binary_fields.py) 的代码来体验二进制字段的加法，乘法和除法。
 
-> Division in binary fields is done by combining multiplication and inversion: $\frac35=3 \times \frac15$ . The "simple but slow" way to do inversion is an application of [generalized Fermat's little theorem](https://planetmath.org/fermatslittletheorem): $\frac1x=x^{2^{2^k}-2}$ for any $k$ where $2^{2^k}>x$ . In this case, $\frac15=5^{14}=14$ , and so $\frac35=3*14=9$ . There is also a more complicated but more efficient inversion algorithm, which you can find [here](https://ieeexplore.ieee.org/document/612935). You can use [the code here](https://github.com/ethereum/research/blob/master/binius/binary_fields.py) to play around with binary field addition, multiplication and division yourself.
+> Division in binary fields is done by combining multiplication and inversion: $\frac35=3 \times \frac15$ . The "simple but slow" way to do inversion is an application of [generalized Fermat&#39;s little theorem](https://planetmath.org/fermatslittletheorem): $\frac1x=x^{2^{2^k}-2}$ for any $k$ where $2^{2^k}>x$ . In this case, $\frac15=5^{14}=14$ , and so $\frac35=3*14=9$ . There is also a more complicated but more efficient inversion algorithm, which you can find [here](https://ieeexplore.ieee.org/document/612935). You can use [the code here](https://github.com/ethereum/research/blob/master/binius/binary_fields.py) to play around with binary field addition, multiplication and division yourself.
 
 ![img](https://vitalik.eth.limo/images/binius/additiontable.png) ![img](https://vitalik.eth.limo/images/binius/multiplicationtable.png)
 
-*左：4 bit 二进制域的加法表（表中元素是用 $1\text{,}x_0\text{,}x_1$ 和 $x_0x_1$ 组合而来的）右：乘法表*
+[FIXME]感觉是16-bit的不是4-bit
+*左：16-bit 二进制域的加法表（表中元素是用 $1\text{,}x_0\text{,}x_1$ 和 $x_0x_1$ 组合而来的）右：乘法表*
 
 > *Left: addition table for four-bit binary field elements (ie. elements made up only of combinations of $1\text{,}x_0\text{,}x_1\text{ and }x_0x_1$). Right: multiplication table for four-bit binary field elements.*
 
-这种二进制域最棒的特性莫过于其结合了一些“常规的”整数运算和模运算。如同整数一样，二进制域中的元素是没有上限的，只要你进行域扩张操作，但也具有模运算的好处，在二进制域上进行操作时，得到的结果依然在这个域内。例如：
+这种二进制域最棒的特性莫过于其结合了一些“常规的”整数运算和模运算。如同整数一样，二进制域中的元素是没有上限的，只要你进行域扩张操作，但也具有模运算的好处，在二进制域上进行操作时，得到的结果依然在这个域内。例如：如果你在有限域上连续的计算42的0到255次幂并取模，你会得到：
 
 > The beautiful thing about this type of binary field is that it combines some of the best parts of "regular" integers and modular arithmetic. Like regular integers, binary field elements are unbounded: you can keep extending as far as you want. But like modular arithmetic, if you do operations over values within a certain size limit, all of your answers also stay within the same bound. For example, if you take successive powers of $42$, you get:
 
@@ -534,8 +543,8 @@ $1,42,199,215,245,249,180,91, \ldots$
 
 并且在 255 步之后你会重新回到起点 $42^{255}=1$ 。
 
-> And after $255$ steps, you get right back to $42^{255}=1$. 
-> 
+> And after $255$ steps, you get right back to $42^{255}=1$.
+>
 > 补充：这里我实在是没算明白这里是怎么算的。。。
 
 就像正整数和模运算一样，它们遵循通常的数学定律：$a \times b=b \times a, a \times (b+c) = a \times b+a \times c$，甚至还有一些奇怪的规则。比如： $a^2+b^2=(a+b)^2$ （因为 $(a+b)^2 = a^2 + 2ab + b^2$ 其中 $2ab \mod 2 = 0$ ）
@@ -544,11 +553,11 @@ $1,42,199,215,245,249,180,91, \ldots$
 
 并且还有一点，二进制域与位可以方便地配合使用：如果你在一个能用 $2^k$ bits 表达的数字，那你所有可能的输出也能用 $2^k$ bits 来表达。这避免了一些棘手的问题，在以太坊 [EIP-4844](https://www.eip4844.com/) ，
 
-- [ ] TODO: 4844 这里的翻译：一个 blob 的 chunk 需要去模`52435875175126190479447740508185965837690552500527637822603658699938581184513` ，因此编码二进制数据需要扔掉一些空间，并在应用层进行额外的检查，以确保每个元素存储的值小于 2 的 248 次方。这也意味着二进制域运算在计算机上是超级快的 —— 无论是 CPU，还是理论上最优的 FPGA 和 ASIC 设计。
+- [ ] TODO: 4844 这里的翻译：一个 blob 的 chunk 需要去模 `52435875175126190479447740508185965837690552500527637822603658699938581184513` ，因此编码二进制数据需要扔掉一些空间，并在应用层进行额外的检查，以确保每个元素存储的值小于 2 的 248 次方。这也意味着二进制域运算在计算机上是超级快的 —— 无论是 CPU，还是理论上最优的 FPGA 和 ASIC 设计。
 
 > And finally, binary fields work conveniently with bits: if you do math with numbers that fit into $2^k$ bits, then all of your outputs will also fit into $2^k$ bits. This avoids awkwardness like eg. with Ethereum's [EIP-4844](https://www.eip4844.com/), where the individual "chunks" of a blob have to be numbers modulo `52435875175126190479447740508185965837690552500527637822603658699938581184513`, and so encoding binary data involves throwing away a bit of space and doing extra checks at the application layer to make sure that each element is storing a value less than  $2^{248}$ . It also means that binary field arithmetic is *super* fast on computers - both CPUs, and theoretically optimal FPGA and ASIC designs.
 
-这意味着我们可以用一种完全避免整数「爆炸」的方式去做 Reed-Solomon 里德所罗门编码 ，来就像在前文中中看到的那样，并且该方式还是计算机擅长的原生运算。二进制域的拆分属性（参照这个例子 $1100101010001111 = 11001010 + 10001111 \times x_3$ ）能让我们根据需要进行拆分，能让我们具有更大的灵活性。
+这意味着我们可以用一种完全避免整数「爆炸」的方式，就像在前文中看到的那样做 Reed-Solomon 里德所罗门编码 ，并且该方式还是计算机擅长的原生运算。二进制域的拆分属性（参照这个例子 $1100101010001111 = 11001010 + 10001111 \times x_3$ ）能让我们根据需要进行拆分，能让我们具有更大的灵活性。
 
 > This all means that we can do things like the Reed-Solomon encoding that we did above, in a way that completely avoids integers "blowing up" like we saw in our example, and in a way that is extremely "native" to the kind of calculation that computers are good at. The "splitting" property of binary fields - how we were able to do $1100101010001111=11001010+10001111*x_3$ , and then keep splitting as little or as much as we wanted, is also crucial for enabling a lot of flexibility.
 
@@ -556,7 +565,7 @@ $1,42,199,215,245,249,180,91, \ldots$
 
 *See* *[here](https://github.com/ethereum/research/blob/master/binius/packed_binius.py) for a python implementation of this protocol.*
 
-现在我们让我们来看一下完整的 Binius 协议，其把之前提到的 "simple Binius" 适配到了二进制域上并且让我们能够承诺单独的 bit 。这个协议很难理解，因为它在不同的视角之间来回切换地看待一组二进制位；这比我在理解一个加密协议上通常用的时间要长。但一旦理解了二进制域，好消息是 Binius 并不依赖于任何“更难的数学”。不像椭圆曲线配对，在那里你会深入到代数几何的更深层次；在这里，二进制域是你所需要的全部。
+现在我们让我们来看一下完整的 Binius 协议，其把 "simple Binius" 适配到了（i）二进制域上并且(ii)让我们能够承诺单个 bit。这个协议很难理解，因为它在不同的视角之间来回切换地看待一个位矩阵；这比我在理解一个加密协议上通常用的时间要长。但一旦理解了二进制域，好消息是 Binius 并不依赖于任何“更难的数学”。不像椭圆曲线配对，在那里你会深入到代数几何的更深层次；在这里，二进制域是你所需要的全部。
 
 > Now, we can get to "full Binius", which adjusts "simple Binius" to (i) work over binary fields, and (ii) let us commit to individual bits. This protocol is tricky to understand, because it keeps going back and forth between different ways of looking at a matrix of bits; it certainly took me longer to understand than it usually takes me to understand a cryptographic protocol. But once you understand binary fields, the good news is that there isn't any "harder math" that Binius depends on. This is not [elliptic curve pairings](https://vitalik.eth.limo/general/2017/01/14/exploring_ecp.html), where there are deeper and deeper rabbit holes of algebraic geometry to go down; here, binary fields are all you need.
 
@@ -566,7 +575,7 @@ $1,42,199,215,245,249,180,91, \ldots$
 
 ![img](https://vitalik.eth.limo/images/binius/binius.drawio.png)
 
-现在你应该理解了这里面的绝大部分组件，拍平 Hypercube ，把行组合和列组合作为取值点的张量积，以及检查“先里德所罗门扩展后行组合”是否等于“先行组合后里德所罗门扩展” 这些都在 simple Binius 章节中介绍过了
+现在你应该理解了这里面的绝大部分组件：将 Hypercube拍平成方阵 ，把方阵的行组合和列组合作为取值点的张量积，以及检查“先里德所罗门扩展后行组合”是否等于“先行组合后里德所罗门扩展” 这些都在 simple Binius 章节中介绍过了
 
 > By now, you should be familiar with most of the components. The idea of "flattening" a hypercube into a grid, the idea of computing a row combination and a column combination as tensor products of the evaluation point, and the idea of checking equivalence between "Reed-Solomon extending then computing the row combination", and "computing the row combination then Reed-Solomon extending", were all in simple Binius.
 
@@ -574,40 +583,43 @@ $1,42,199,215,245,249,180,91, \ldots$
 
 > What's new in "full Binius"? Basically three things:
 
-- Hypercube 和方阵上的每一个值都是 bit 形式的
-- 扩展时按列分组 bit ，并临时假装它们是更大的域元素来将位扩展成更多位。
+- Hypercube 和方阵上的每一个值都是 bit 形式的（0或1， 每个值都用二进制表达）
+- 扩展时按列分组 bits ，并临时假装它们是更大的域元素来将位扩展成更多位。
 - 在行组合之后，有一个逐元素的“分解成位”步骤，它将扩展重新转换回位。
+
 > - The individual values in the hypercube, and in the square, have to be bits (0 or 1)
 > - The extension process extends bits into more bits, by grouping bits into columns and temporarily pretending that they are larger field elements
 > - After the row combination step, there's an element-wise "decompose into bits" step, which converts the extension back into bits
 
-我们会按顺序讲解这两个过程。首先是新的扩展处理。Reed-Solomon码存在一个基本限制，即如果要将 $n$ 个值扩展到 $k \times n$ 个值，你需要在一个具有 $k \times n$ 个不同值的域中工作。使用$F_2$（又称为比特）时，你只有两个不同的值。因此，我们将相邻的 $F_2$ 元素“打包”到更大的值中。这里有个小例子，我们一次将两个比特打包成 ${0,1,2,3}$ 中的元素，因为我们的拉格朗日插值只在四个点上求值，所以上面元素的总数对我们来说正好。在一个“真实”的证明中，我们可能一次打包16个比特。然后我们对这些打包后的值进行 Reed-Solomon 编码，再将它们解压缩回比特。
+我们会按顺序讲解这些新东西。首先是新的扩展处理。Reed-Solomon码存在一个基本限制，即如果要将 $n$ 个值扩展到 $k \times n$ 个值，你需要在一个具有 $k \times n$ 个不同值的域中工作。这无法在$F_2$（又称为，比特bits）上完成，因为 $F_2$ 有两个元素。因此，我们将相邻的 $F_2$ 元素“打包”到更大的值中。在本文的例子中，我们每次两个bits打包，来表示一个 ${0,1,2,3}$ 中的元素，因为我们的拉格朗日插值只在四个点上求值(注，下图的(0,0),(1,3),(2,1),(3,2))，所以上面元素的总数对我们来说正好。在一个“真实”的证明中，我们可能一次打包16个比特。然后我们对这些打包后的值进行 Reed-Solomon 编码，再将它们解压缩回比特。
 
 > We will go through both in turn. First, the new extension procedure. A Reed-Solomon code has the fundamental limitation that if you are extending $n$ values to $k \times n$ values, you need to be working in a field that has $k \times n$ different values that you can use as coordinates. With $F_2$ (aka, bits), you cannot do that. And so what we do is, we "pack" adjacent $F_2$ elements together into larger values. In the example here, we're packing two bits at a time into elements in $\{0,1,2,3\}$ , because our extension only has four evaluation points and so that's enough for us. In a "real" proof, we would probably back 16 bits at a time together. We then do the Reed-Solomon code over these packed values, and unpack them again into bits.
 
 ![img](https://vitalik.eth.limo/images/binius/basicbinius3.drawio.png)
 
-现在来看一下行的线性组合，为了确保“在随机点求值”这件事具有足够的安全性，我们需要在一个比较大的空间中采样出一个随机点，并且要比我们编码的这个Hypercube还要大很多很多，在我们的例子中，"row combination" 的结果是 [11,4,6,1] 。
+现在来看一下**行的线性组合**，为了确保“在随机点求值”这件事具有足够的安全性，我们需要在一个比较大的空间中采样出一个随机点，并且要比我们编码的这个Hypercube还要大很多很多，在我们的例子中，"row combination" 的结果是 [11,4,6,1] 。
 
 > Now, the row combination. To make "evaluate at a random point" checks cryptographically secure, we need that point to be sampled from a pretty large space, much larger than the hypercube itself. Hence, while the points *within* the hypercube are bits, evaluations *outside* the hypercube will be much larger. In our example above, the "row combination" ends up being [11,4,6,1].
 
-这就带来了一个问题：我们知道如何将成对的 bit 组合成一个更大的值，然后对此进行 Reed-Solomon 扩展，但是你如何对更大的值做同样的事情呢？
+这就带来了一个问题：我们知道如何将成对的 bits 组合成一个更大的值，然后对此进行 Reed-Solomon 扩展，但是你如何对更大的值做同样的事情呢？
 
 > This presents a problem: we know how to combine pairs of *bits* into a larger value, and then do a Reed-Solomon extension on that, but how do you do the same to pairs of much larger values?
 
-Binius 的诀窍是按位执行：我们查看每个值的单个位（例如，对于“11”，即 [ 1 , 1 , 0 , 1 ] ），然后我们逐行扩展。也就是说，我们在 1 行执行这个扩展过程，然后是 $x_0$ 行，然后在 $x_1$ 行，然后在 $x_0 \times x_1$ 行，依此类推（在这个示例中，我们止步于此，但在实际实现中，我们将增加到 128 行（最后一行是 $x_6 \times \ldots \times x_0$  ）
+Binius 的诀窍是按位执行：我们将每个值的各个位 （例如，对于“11”，即 [ 1 , 1 , 0 , 1 ]）（注：full binius中超立方的值定义为0或1，怎么会有11？从超立方拍平成方阵，继续后面）, 然后如上图所示*逐行扩展*。也就是说，我们在 1 行执行这个扩展过程，然后是 $x_0$ 行，然后在 $x_1$ 行，然后在 $x_0 \times x_1$ 行，依此类推（在这个示例中，我们止步于此，但在实际实现中，我们将增加到 128 行（最后一行是 $x_6 \times \ldots \times x_0$  ）
 
-- [ ] TODO: 解释一下这里的逐行扩展
+~~- [ ] TODO: 解释一下这里的逐行扩展，图上图所示~~
 
 > The trick in Binius is to do it bitwise: we look at the individual bits of each value (eg. for what we labeled as "11", that's $[1,1,0,1]$ ), and then we extend *row-wise*. That is, we perform the extension procedure on the 1 row of each element, then on the $x_0$ row, then on the " $x_1$ " row, then on the $x_0 \times x_1$ row, and so forth (well, in our toy example we stop there, but in a real implementation we would go up to 128 rows (the last one being $x_6 \times \ldots \times x_0$ )).
 
 回顾：
-- 从 hypercube 中获取 bits ，并且把他们拍平
-- 我们把每一行中的相邻的 bits 视为一组，并把他们看作一个更大的域中的元素，然后对其做里德所罗门扩展
-- 然后我们对每一列中的 bits 做线性组合（系数来自 row-combination）得到一行，然后我们把行中的元素再写成 bits 的形式，
-- 我们把上面的输出视作一个矩阵，并将继续对矩阵的行进行处理
+
+- 从 hypercube 中获取 bits ，并且把他们拍平成方阵
+- 然后，对每一行，我们把相邻的 bits 视为一组，看作一个更大的域中的元素，然后对其做里德所罗门扩展
+- 然后我们对每一列中的 bits 做线性组合（系数来自 row-combination）得到一行（如图中，[11,4,6,1]）
+- 然后我们把上面的输出中的元素再写成 bits 的形式，写成作一个矩阵（如图中（下-中子图）），并将继续对矩阵的行进行处理
 
 > Recapping:
+>
 > - We take the bits in the hypercube, and convert them into a grid
 > - Then, we treat adjacent groups of bits *on each row* as larger field elements, and do arithmetic on them to Reed-Solomon extend the rows
 > - Then, we take a row combination of each *column* of bits, and get a (for squares larger than 4x4, much smaller) column of bits for each row as the output
@@ -637,7 +649,7 @@ $$
 
 一般来说，ZKP 利用 PCS （多项式承诺）进行工作，这些多项式是取值点的陈述：例如我们的 Fibonacci，$F(X+2)-F(X+1)-F(X)=Z(X) \times H(X)$ 同时检查了 Fibonacci，全部计算步骤。我们通过验证多项式在随机点的取值来检查该多项式：对于 $F$ ，假设选取 1892470 作为随机点，对 $F$ ， $Z$ 和 $H$ 在该点取值的 proof 进行验证，然后检查 $F(1892472)-F(1892471)-F(1892470)=Z(1892470) \times H(1892470)$ 是否成立。这种随机点检查相当于对整个多项式进行检查：如果多项式方程不匹配，则它在特定随机坐标处匹配的可能性很小。
 
-- [ ] TODO: 解释一下 $Z(X)$ 和 $H(X)$ 
+- [ ] TODO: 解释一下 $Z(X)$ 和 $H(X)$
 
 > Generally, zero knowledge proof systems work by making statements about polynomials that simultaneously represent statements about the underlying evaluations: just like we saw in the Fibonacci example, $F(X+2)-F(X+1)-F(X)=Z(X) \times H(X)$ simultaneously checks all steps of the Fibonacci computation. We check statements about polynomials by proving evaluations at a random point: given a commitment to $F$, you might randomly choose eg. 1892470, demand proofs of evaluations of $F$ , $Z$ and $H$ at that point (and $H$ at adjacent points), check those proofs, and then check if $F(1892472)-F(1892471)-F(1892470)=Z(1892470) \times H(1892470)$ . This check at a random point stands in for checking the whole polynomial: if the polynomial equation *doesn't* match, the chance that it matches at a specific random coordinate is tiny.
 
@@ -650,13 +662,14 @@ $$
 > To get around this, we want to make the field as small as possible. Plonky2 brought us down from 256-bit numbers to 64-bit numbers, and then Plonky3 went further to 31 bits. But even this is sub-optimal. With binary fields, we can work over *individual bits*. This makes the encoding "dense": if your actual underlying data has `n` bits, then your encoding will have `n` bits, and the extension will have `8 * n` bits, with no extra overhead.
 
 现在，让我们第三次看一下这张图：
+
 > Now, let's look at the diagram a third time:
 
 ![img](https://vitalik.eth.limo/images/binius/binius.drawio.png)
 
-Binius 对多线性多项式进行承诺：对于多项式 $P(x_0,x_1\ldots x_k)$ ，hypercube 上的点 $P(0,0\ldots0),P(0,0\ldots1)$ 到 $P(1,1,\ldots1)$ 持有我们关心的数据。为了证明多项式在某个的取值，我们将相同的数据“拍平”为正方形。然后，对每一行的 bit 分组后使用 Reed-Solomon 编码对每一行扩展，为数据提供随机 Merkle 分支查询所需的冗余，以确保安全。然后，我们计算行的随机线性组合，并设计系数，以便新的组合行实际上包含我们关心的取值。这个新创建的行（被重新解释为 128 行位）和一些随机选择的带有 Merkle 分支的列都会传递给验证者。这是 $O(\sqrt{N})$ data：新行具有 $O(\sqrt{N})$ 大小，并且传递的每个（恒定数量的）列都具有 $O(\sqrt{N})$ 大小。
+Binius 对多元线性多项式进行承诺：对于多项式 $P(x_0,x_1\ldots, x_k)$ ，hypercube 上的点 $P(0,0\ldots,0),P(0,0\ldots,1)$ 到 $P(1,1,\ldots,1)$ 是我们关心的数据。为了证明多项式在某个的取值$P(x_0,x_1\ldots, x_k)$ ，我们将hypercube 上相同的数据“拍平”为方阵。然后，对每一行的 bit 分组后使用 Reed-Solomon 编码对每一行扩展，为数据提供随机 Merkle 分支查询所需的冗余，以确保安全。然后，我们计算行的随机线性组合，并设计系数，以便新的组合行实际上包含我们关心的取值。这个新创建的行（被重新解释为 128 行位）和一些随机选择的带有 Merkle 分支的列都会传递给验证者。这是 $O(\sqrt{N})$ data：新行具有 $O(\sqrt{N})$ 大小，并且传递的每个（恒定数量的）列都具有 $O(\sqrt{N})$ 大小。
 
-> In Binius, we are committing to a *multilinear polynomial*: a hypercube $P(x_0,x_1\ldots x_k)$, where the individual evaluations $P(0,0\ldots0),P(0,0\ldots1)\text{ up to }P(1,1,\ldots1)$ are holding the data that we care about. To prove an evaluation at a point, we "re-interpret" the same data as a square. We then extend each *row*, using Reed-Solomon encoding over *groups* of bits, to give the data the redundancy needed for random Merkle branch queries to be secure. We then compute a random linear combination of rows, with coefficients designed so that the new combined row actually holds the evaluation that we care about. Both this newly-created row (which get re-interpreted as 128 rows of bits), and a few randomly-selected columns with Merkle branches, get passed to the verifier. This is $O(\sqrt{N})$ data: the new row has $O(\sqrt{N})$ size, and each of the (constant number of) columns that get passed has $O(\sqrt{N})$ size.
+> In Binius, we are committing to a *multilinear polynomial*: a hypercube $P(x_0,x_1\ldots x_k)$, where the individual evaluations $P(0,0\ldots0),P(0,0\ldots,1)\text{ up to }P(1,1,\ldots,1)$ are holding the data that we care about. To prove an evaluation at a point, we "re-interpret" the same data as a square. We then extend each *row*, using Reed-Solomon encoding over *groups* of bits, to give the data the redundancy needed for random Merkle branch queries to be secure. We then compute a random linear combination of rows, with coefficients designed so that the new combined row actually holds the evaluation that we care about. Both this newly-created row (which get re-interpreted as 128 rows of bits), and a few randomly-selected columns with Merkle branches, get passed to the verifier. This is $O(\sqrt{N})$ data: the new row has $O(\sqrt{N})$ size, and each of the (constant number of) columns that get passed has $O(\sqrt{N})$ size.
 
 然后验证者计算“扩展之后的行组合”和“行组合的扩展”，并确认两者是否相等。然后计算一个列组合，并检查计算结果和 Prover 声称的是否一致。
 
@@ -670,7 +683,6 @@ Binius 对多线性多项式进行承诺：对于多项式 $P(x_0,x_1\ldots x_k)
 - Lookup protocol
 - 比平方根更高效的验证时间
 - Binius 如何影响“SNARK-friendly" 函数
-
 - **Efficient algorithms to extend the rows**, which are needed to actually make the computational efficiency of the verifier $O(\sqrt{N})$ . With naive Lagrange interpolation, we can only get $O(N^{\frac23})$ . For this, we use Fast Fourier transforms over binary fields, described [here](https://vitalik.eth.limo/general/2019/05/12/fft.html) (though the exact implementation will be different, because this post uses a less efficient construction not based on recursive extension).
 - **Arithmetization**. Univariate polynomials are convenient because you can do things like $F(X+2)-F(X+1)-F(X)=Z(X) \times H(X)$ to relate adjacent steps in the computation. In a hypercube, the interpretation of "the next step" is not nearly as clean as " $X+1$ ". You *can* do $X \times k$ and jump around powers of $k$ , but this jumping around behavior would sacrifice many of the key advantages of Binius. The [Binius paper](https://eprint.iacr.org/2023/1784.pdf) introduces solutions to this (eg. see Section 4.3), but this is a "deep rabbit hole" in its own right.
 - **How to actually safely do specific-value checks**. The Fibonacci example required checking key boundary conditions: $F(0)=F(1)=1$ , and the value of $F(100)$ . But with "raw" Binius, checking at pre-known evaluation points is insecure. There are fairly simple ways to convert a known-evaluation check into an unknown-evaluation check, using what are called sum-check protocols; but we did not get into those here.
