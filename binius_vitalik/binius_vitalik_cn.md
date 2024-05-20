@@ -1,6 +1,6 @@
 # Binius: highly efficient proofs over binary fields
 
-*除了翻译之外，在 Vitalik 的原文基础上做了一些补充内容，用以帮助读者更好的理解这篇文章，特别感谢 Jade 的贡献*
+*除了翻译之外，在 Vitalik 的原文基础上做了一些补充内容，用以帮助读者更好的理解这篇文章，特别感谢 Jade, Suke 的贡献*
 
 *本文的 Plonky2 部分并不影响读者理解 Binius*
 
@@ -12,7 +12,7 @@
 
 > This post is primarily intended for readers roughly familiar with 2019-era cryptography, especially [SNARKs](https://vitalik.eth.limo/general/2021/01/26/snarks.html) and [STARKs](https://vitalik.eth.limo/general/2018/07/21/starks_part_3.html). If you are not, I recommend reading those articles first. Special thanks to Justin Drake, Jim Posen, Benjamin Diamond and Radi Cojbasic for feedback and review.
 
-在过去的两年中，[STARK](https://vitalik.eth.limo/general/2018/07/21/starks_part_3.html)已经成为一种关键且不可替代的技术，可以有效地生成对**[复杂语句的易验证加密证明](https://vitalik.eth.limo/general/2021/01/26/snarks.html)**（例如，证明以太坊区块是有效的）。其中一个关键原因是域的大小：为了确保安全性，基于椭圆曲线的 SNARK 需要工作在 256 位整数上，而 STARK 可以使用更小的域，并获得更高的效率：首先是 [Goldilocks field](https://polygon.technology/blog/plonky2-a-deep-dive)（64 位整数），然后是 [Mersenne31 和 BabyBear](https://blog.icme.io/small-fields-for-zero-knowledge/)（均为 31 位）。由于这些效率的提高，使用 Goldilocks 的 Plonky2 在证明多种计算方面比其前辈快[数百倍](https://polygon.technology/blog/introducing-plonky2)。
+在过去的两年中，[STARK](https://vitalik.eth.limo/general/2018/07/21/starks_part_3.html)已经成为一种关键且不可替代的技术，可以有效地生成对 **[复杂语句的易验证加密证明](https://vitalik.eth.limo/general/2021/01/26/snarks.html)**（例如，证明以太坊区块是有效的）。其中一个关键原因是域的大小：为了确保安全性，基于椭圆曲线的 SNARK 需要工作在 256 位整数上，而 STARK 可以使用更小的域，并获得更高的效率：首先是 [Goldilocks field](https://polygon.technology/blog/plonky2-a-deep-dive)（64 位整数），然后是 [Mersenne31 和 BabyBear](https://blog.icme.io/small-fields-for-zero-knowledge/)（均为 31 位）。由于这些效率的提高，使用 Goldilocks 的 Plonky2 在证明多种计算方面比其前辈快[数百倍](https://polygon.technology/blog/introducing-plonky2)。
 
 > Over the past two years, [STARKs](https://vitalik.eth.limo/general/2018/07/21/starks_part_3.html) have become a crucial and irreplaceable technology for efficiently making [easy-to-verify cryptographic proofs of very complicated statements](https://vitalik.eth.limo/general/2021/01/26/snarks.html) (eg. proving that an Ethereum block is valid). A key reason why is *small field sizes*: whereas elliptic curve-based SNARKs require you to work over 256-bit integers in order to be secure enough, STARKs let you use much smaller field sizes, which are more efficient: first [the Goldilocks field](https://polygon.technology/blog/plonky2-a-deep-dive) (64-bit integers), and then [Mersenne31 and BabyBear](https://blog.icme.io/small-fields-for-zero-knowledge/) (both 31-bit). Thanks to these efficiency gains, Plonky2, which uses Goldilocks, is [hundreds of times faster](https://polygon.technology/blog/introducing-plonky2) at proving many kinds of computation than its predecessors.
 
@@ -44,7 +44,7 @@
 
 > One of the key tasks of a cryptographic proving system is to operate over huge amounts of data, while keeping the numbers small. If you can compress a statement about a large program into a mathematical equation involving a few numbers, but those numbers are as big as the original program, you have not gained anything.
 
-为了在进行复杂算术运算的同时确保数字维持在一个很小的范围内，密码学家通常使用**模运算**。简单来说， 我们选择一些素数 $p$ 。 $\%$ 运算符表示“取余数”： $15 \% 7=1, 53 \% 10 = 3$ ，依此类推（请注意，取模的结果始终是非负的，例如 $-1 \% 10 = 9$ ）。
+为了在进行复杂算术运算的同时确保数字维持在一个很小的范围内，密码学家通常使用**模运算**。简单来说， 我们选择一些素数 $p$ 。 $\%$ 运算符表示“取余数”： $15 \mod 7=1, 53 \mod 10 = 3$ ，依此类推（请注意，取模的结果始终是非负的，例如 $-1 \mod 10 = 9$ ）。
 
 > To do complicated arithmetic while keeping numbers small, cryptographers generally use **modular arithmetic**. We pick some prime "modulus" $p$. The $\%$ operator means "take the remainder of" $15 \% 7=1, 53 \% 10 = 3$, etc (note that the answer is always non-negative, so for example $-1 \% 10 = 9$).
 
@@ -72,10 +72,10 @@ $$
 
 上面的规则都是自洽的。 例如，如果 $p=7$，那么：
 
-- $5 + 3 = 1$ (因为 $8 \% 7 = 1$)
-- $1 - 3 = 5$ (因为 $-2 \% 7 = 5$)
-- $2 \times 5 = 3$ (因为 $10 \% 7 = 3$)
-- $3/5 = 2$ (因为 $(3 \times 5^5) \% 7 = 9375 \%7 = 2$)
+- $5 + 3 = 1$ (因为 $8 \mod 7 = 1$ )
+- $1 - 3 = 5$ (因为 $-2 \mod 7 = 5$ )
+- $2 \times 5 = 3$ (因为 $10 \mod 7 = 3$ )
+- $3/5 = 2$ (因为 $(3 \times 5^5) \mod 7 = 9375 \mod 7 = 2$ )
 
 这种结构的一个更通用术语是**有限域**。[有限域](https://en.wikipedia.org/wiki/Finite_field)是一种数学结构，它遵循通常的算术定律，但存在可能值的数量有限，因此每个值都可以用固定的大小来表示。
 
@@ -85,19 +85,19 @@ $$
 >
 > 在域中可以定义加、减、乘、除四种运算。例如我们熟知的有理数域、实数域和复数域，但是注意整数并不是一个域，因为两个整数相除之后的结果不一定是整数（例如 $2 / 3$ 不是一个整数 ）。那么有限域是什么呢？就是如果一个域，它的元素个数是有限个，我们就称之为有限域。上述举的有理数域、实数域和复数域，这些域中元素的个数都是无限的，都不是有限域。我们假设一个有限域的大小（即域中元素的个数）为 $q$ ，可以用 $F_q$ 来表示这个有限域，例如 Binius 用到的最简单的一个有限域 $F_2 = \{ 0,1\}$ 。
 
-模算术（或**素数域**）是最常见的有限域类型，但也有另一种类型：**扩域**。您之前可能已经看过一个扩域：复数。我们“想象”一个新元素，我们用 $i$ 表示 ，并声明它满足 $i^2=−1$。然后，您可以使用任意的实数和 $i$ 做线性组合 ，并用它做数学运算： $(3i+2)*(2i+4)=6i^2+12i+4i+8=16i+2$ 。我们同样可以对素数域进行扩域。当我们开始处理更小的字段时，素数域的扩域对于保持安全性变得越来越重要，而 Binius 使用的二进制域及其扩域具有非常好的实用性。
+模算术（或**素数域**）是最常见的有限域类型，但也有另一种类型：**扩域**。您之前可能已经看过一个扩域：复数。我们“想象”一个新元素，我们用 $i$ 表示 ，并声明它满足 $i^2=−1$。然后，您可以使用任意的实数和 $i$ 做线性组合 ，并用它做数学运算： $(3i+2)*(2i+4)=6i^2+12i+4i+8=16i+2$ 。我们同样可以对素数域进行扩域。当我们开始处理更小的域时，素数域的扩域对于保持安全性变得越来越重要，而 Binius 使用的二进制域及其扩域具有非常好的实用性。
 
 > Modular arithmetic (or **prime fields**) is the most common type of finite field, but there is also another type: **extension fields**. You've probably already seen an extension field before: the complex numbers. We "imagine" a new element, which we label $i$, and declare that it satisfies $i^2=−1$. You can then take any combination of regular numbers and $i$, and do math with it: $(3i+2)*(2i+4)=6i^2+12i+4i+8=16i+2$ . We can similarly take extensions of prime fields. As we start working over fields that are smaller, extensions of prime fields become increasingly important for preserving security, and binary fields (which Binius uses) depend on extensions entirely to have practical utility.
 
-扩域是理解 Binius 非常重要的一个部分。这里用我们熟悉的实数域扩域到复数域来说明下扩域这个概念。
+- [ ] TODO: 扩域是理解 Binius 非常重要的一个部分。这里用我们熟悉的实数域扩域到复数域来说明下扩域这个概念。
 
 ## Recap: arithmetization
 
-SNARKs 和 STARKs 是通过*算术化(arithmetization)*来证明计算机的程序执行：将你想证明的关于一个程序的*陈述(statement)*转换为涉及多项式的数学方程。方程的有效解就对应程序的有效执行。
+SNARKs 和 STARKs 是通过 *算术化(arithmetization)* 来证明计算机的程序执行：将你想证明的关于一个程序的 *陈述(statement)* 转换为涉及多项式的数学方程。方程的有效解就对应程序的有效执行。
 
 > The way that SNARKs and STARKs prove things about computer programs is through **arithmetization**: you convert a statement about a program that you want to prove, into a mathematical equation involving polynomials. A valid solution to the equation corresponds to a valid execution of the program.
 
-为了举一个简单的例子，假设我计算了第 100 个Fibonacci 数，并且我想向你证明它是什么。我构造了一个多项式 $F$ 来编码 Fibonnacci 数：因此 $F(0)=F(1)=1,F(2)=2,F(3)=3,F(4)=5$ ，以此类推到，直到第 100 步。我需要证明的条件是：对于 $x=\{0,1 \ldots 98\}$ ，都有 $F(x+2)=F(x)+F(x+1)$ 。我可以通过给出下面这样的商式来说服你：
+为了举一个简单的例子，假设我计算了第 100 个 Fibonacci 数，并且我想向你证明它是什么。我构造了一个多项式 $F$ 来编码 Fibonnacci 数：因此 $F(0)=F(1)=1,F(2)=2,F(3)=3,F(4)=5$ ，以此类推，直到第 100 步。我需要证明的条件是：对于 $x=\{0,1, \ldots ,98\}$ ，都有 $F(x+2)=F(x)+F(x+1)$ 。我可以通过给出下面这样的商式来说服你：
 
 $$
 H(x)=\frac{F(x+2)-F(x+1)-F(x)}{Z(x)}
@@ -113,7 +113,7 @@ $$
 
 > Where $Z(x)=(x-0)*(x-1)*\ldots*(x-98)$. If I can provide valid $F$ and $H$ that satisfy this equation, then $F$ must satisfy $F(x+2)-F(x+1)-F(x)$ across that range. If I additionally verify that $F$ satisfies $F(0)=F(1)=1$ , then $F(100)$ must actually be the 100th Fibonacci number.
 
-- TODO: 解释一下商多项式
+- [ ] TODO: 解释一下商多项式
 
 如果你想证明更复杂的东西，那么你可以用一个更复杂的方程来替换“简单”的关系式 $F(x+2)=F(x)+F(x+1)$，这个方程基本上在说“$F(x+1)$ 是以状态 $F(x)$ 初始化虚拟机并运行一个计算步骤后的输出”。你也可以用一个更大的数字来替换数字 100 ，例如 100000000 ，以容纳更多的步骤。
 
@@ -147,7 +147,7 @@ $$
 
 ![](https://vitalik.eth.limo/images/binius/rs_example.png)
 
-一些多项式求值的 Reed-Solomon 扩展。即使原始值很小，额外的值也会放大到字段的完整大小（在本例中为 $2^{31}-1$ ）。
+一些多项式求值的 Reed-Solomon 扩展。即使原始值很小，额外的值也会放大到域的完整大小（在本例中为 $2^{31}-1$ ）。
 
 > A Reed-Solomon extension of some polynomial evaluations. Even though the original values are small, the extra values all blow up to the full size of the field (in this case $2^{31} - 1$).
 
@@ -182,8 +182,8 @@ $$
 
 我们要面对两个问题：
 
-1. 如果用一个多项式（polynomial）去表示很多值，~~这些值需要在多项式的评估（evaluations）时是可访问的:~~ 比如前文提到的斐波那契例子 $F(0),\:F(1)\:...\:F(100)$ ，而在更大规模的计算中， $F(x)$ 的索引会达到数百万。更大的索引需要我们用更大的域来表示。
-2. 证明我们在Merkle树中承诺的任何值（就像所有的STARKs所做的那样）需要对它进行Reed-Solomon编码：将 $n$ 个值扩展到 $8n$ 个值，利用这种冗余来防止恶意的证明者通过伪造计算中间的一个值来进行欺诈。这也需要有一个足够大的域：为了将一百万的值扩展到八百万，你需要有八百万不同的点来评估多项式。
+1. 如果用一个多项式（polynomial）去表示很多值，则这些值就是多项式在对应点上的取值（evaluations）: 比如前文提到的斐波那契例子 $F(0),\:F(1)\:...\:F(100)$ ，那么在更大规模的计算中， $F(x)$ 的点会达到数百万。更多的点需要我们用更大的域来表示。
+2. 证明我们在 Merkle 树中承诺的任何值（就像所有的 STARKs 所做的那样）需要对它进行 Reed-Solomon 编码：将 $n$ 个值扩展到 $8n$ 个值，利用这种冗余来防止恶意的证明者通过伪造计算中间的一个值来进行欺诈。这也需要有一个足够大的域：为了将一百万的值扩展到八百万，你需要有八百万不同的点来评估多项式。
 
 > Here, we face two practical problems:
 >
@@ -191,17 +191,17 @@ $$
 > 2. Proving anything about a value that we're committing to in a Merkle tree (as all STARKs do) requires Reed-Solomon encoding it: extending $n$ values into eg. $8n$ values, using the redundancy to prevent a malicious prover from cheating by faking one value in the middle of the computation. This also requires having a large enough field: to extend a million values to 8 million, you need 8 million different points at which to evaluate the polynomial.
 
 Binius 通过两种不同的方式来表示同一组数据，用以分别解决上述的两个问题。首先，基于椭圆曲线的 SNARKs ，2019年的 STARKs，Plonky2 和其他的证明系统通常处理单变量多项式 $F(x)$ 。Binus
-则从 Spartan 协议中获取灵感，使用“多变量”多项式：$F(x_1,x_2\ldots x_k)$ 。事实上，我们用一个 Hypercube 来表示整个 computational trace ，其中每一个的 $x_i$ 的取值是 0或 1 。举个例子，如果我们想要在一个足够大的域上表示一个斐波那契数列，我们把数列的前 16 个数字表示为下图中的超立方
+则从 Spartan 协议中获取灵感，使用“多变量”多项式：$F(x_1,x_2, \ldots, x_k)$ 。事实上，我们用一个 Hypercube 来表示整个 computational trace ，其中每一个的 $x_i$ 的取值是 0 或 1 。举个例子，如果我们想要在一个足够大的域上表示一个斐波那契数列，我们把数列的前 16 个数字表示为下图中的超立方体
 
 > A key idea in Binius is solving these two problems separately, and doing so by representing the same data in two different ways. First, the polynomial itself. Elliptic curve-based SNARKs, 2019-era STARKs, Plonky2 and other systems generally deal with polynomials over *one* variable: $F(x)$ . Binius, on the other hand, takes inspiration from the [Spartan](https://eprint.iacr.org/2019/550.pdf) protocol, and works with *multivariate* polynomials: $F(x_1,x_2\ldots x_k)$. In fact, we represent the entire computational trace on the "hypercube" of evaluations where each $x_i$ is either 0 or 1. For example, if we wanted to represent a sequence of Fibonacci numbers, and we were still using a field large enough to represent them, we might visualize the first sixteen of them as being something like this:
 
 ![](https://vitalik.eth.limo/images/binius/hypercube.png)
 
-在这个例子中，“$F(0, 0, 0, 0)$ 为 1，$F(1, 0, 0, 0)$ 也为 1，$F(0, 1, 0, 0)$ 为 2，依此类推，直到 $F(1, 1, 1, 1) = 987$” 表示了一个超立方体中的各个点的取值。对于这样一组取值，存在唯一一个多元线性多项式（每个变量的阶为1），可以生成这些值。因此，我们可以用这组取值来代表该多项式；从而无需计算系数。
+在这个例子中，“$F(0, 0, 0, 0)$ 为 1，$F(1, 0, 0, 0)$ 也为 1，$F(0, 1, 0, 0)$ 为 2，依此类推，直到 $F(1, 1, 1, 1) = 987$” 表示了一个超立方体中的各个点的取值。对于这样一组取值，存在唯一一个多元线性多项式（每个变量的阶为1），其取值对应图上的这些数字。因此，我们可以用这组取值来代表该多项式；从而无需计算系数。
 
 > That is, $F(0, 0, 0, 0)$ would be 1, $F(1, 0, 0, 0)$ would also be 1, $F(0, 1, 0, 0)$ would be 2, and so forth, up until we get to $F(1, 1, 1, 1) = 987$. Given such a hypercube of evaluations, there is exactly one multilinear (degree-1 in each variable) polynomial that produces those evaluations. So we can think of that set of evaluations as representing the polynomial; we never actually need to bother computing the coefficients.
 >
-> 补充：这里也可以理解成一个 key-value pair（键值对），key 是这个 Hypercube 上的所有点，value 是斐波那契数列中的数字，并且如果读者去从右到左去阅读这些点，你会发现这些点和二进制表示的整数是一致的。
+> 补充：这里也可以理解成一个 key-value pair（键值对），key 是这个 Hypercube 上的所有点，value 是斐波那契数列中的数字，并且如果读者去从右到左去看每一个点，你会发现这些点是计算机中二进制的倒序。
 >
 > | hypercube 上的点 | 用十进制整数表示的 Key/Index | Value |
 > | ---------------- | ---------------------------- | ----- |
@@ -222,7 +222,7 @@ Binius 通过两种不同的方式来表示同一组数据，用以分别解决�
 > | (0, 1, 1, 1)     | 14                           | 610   |
 > | (1, 1, 1, 1)     | 15                           | 987   |
 
-这个只是一个简化的例子：在实践中，使用 Hypercube 的真正目的是让我们能够处理单个比特。用“Binius-native” 方式来计算斐波那契数的话，会使用更高维的超立方体，例如用每组16个比特来存储一个数字，这在binius中不难实现。
+这个只是一个简化的例子：在实践中，使用 Hypercube 的真正目的是让我们能够处理单个比特。用“Binius-native” 方式来计算斐波那契数的话，会使用更高维的超立方体，例如用每组16个比特来存储一个数字，这在 binius 中不难实现。
 
 - [ ] FIXME: 这需要一些巧妙的方法来实现这些bits的整数加法，但使用Binius来实现这一点并不太困难。
 
@@ -242,11 +242,11 @@ Binius 通过两种不同的方式来表示同一组数据，用以分别解决�
 
 ![](https://vitalik.eth.limo/images/binius/basicbinius1.drawio.png)
 
-现在我们使用里德所罗门编码去扩展这个方阵，我们把每一行看成一个 3 阶多项式，并将行中的数字视为多项式在 $x = {0, 1, 2, 3}$ 上的取值，然后求这个多项式在 $x = {4, 5, 6, 7}$ 上的取值。
+现在我们使用里德所罗门编码去扩展这个方阵，我们把每一行看成一个 3 阶多项式，并将行中的数字视为多项式在 $x = \{0, 1, 2, 3\}$ 上的取值，然后求这个多项式在 $x = \{4, 5, 6, 7\}$ 上的取值。
 
-> Now, we Reed-Solomon extend the square. That is, we treat each row as being a degree-3 polynomial evaluated at $x = {0, 1, 2, 3}$, and evaluate the same polynomial at $x = {4, 5, 6, 7}$:
+> Now, we Reed-Solomon extend the square. That is, we treat each row as being a degree-3 polynomial evaluated at $x = \{0, 1, 2, 3\}$, and evaluate the same polynomial at $x = \{4, 5, 6, 7\}$:
 >
-> 补充：以图中的第一行为例，让 $x = {0, 1, 2, 3}$ 作为输入，第一行中的四个值 $y = {3, 1, 4, 1}$ 作为输出。于是我们有点对 $(x=0, y=3), (x=1, y=1), (x=2, y=4), (x=1, y=1)$ ，计算其拉格朗日多项式，得到 $\frac{(x-1)(x-2)(x-3)}{-2} + \frac{x(x-2)(x-3)}{2} + 2x(x-1)(x-3) + \frac{x(x-1)(x-2)}{6}$ ，然后带入 $x = {4, 5, 6, 7}$ 到这个多项式中，得到 $y={-19, -67, -154, -291}$ 即图中右侧方阵的第一行
+> 补充：以图中的第一行为例，让 $x = \{0, 1, 2, 3\}$ 作为输入，第一行中的四个值 $y = \{3, 1, 4, 1\}$ 作为输出。于是我们有点对 $(x=0, y=3), (x=1, y=1), (x=2, y=4), (x=1, y=1)$ ，计算其拉格朗日多项式，得到 $\frac{(x-1)(x-2)(x-3)}{-2} + \frac{x(x-2)(x-3)}{2} + 2x(x-1)(x-3) + \frac{x(x-1)(x-2)}{6}$ ，然后带入 $x = \{4, 5, 6, 7\}$ 到这个多项式中，得到 $y=\{-19, -67, -154, -291\}$ 即图中右侧方阵的第一行
 
 ![](https://vitalik.eth.limo/images/binius/basicbinius.drawio.png)
 
@@ -319,7 +319,7 @@ $$
 >
 > 把上面得出的四个结果写到一个列表里面，我们就得到了上面的式子
 
-使用  $r= \{1,2,3,4\} $ ，则 $r_2 = 3$ and $r_3 = 4$ ：
+使用  $r= \{1,2,3,4\}$ ，则 $r_2 = 3$ and $r_3 = 4$ ：
 
 > Using $r=\{1,2,3,4\}$ (so $r_2 = 3$ and $r_3 = 4$):
 
@@ -499,7 +499,7 @@ $$
 >
 > 那么不难理解，一个 16 bits的数字按照一次扩域的定义 $a + bx_i$ 展开，我们有 $11001010+10001111 \times x_3$ 。
 
-这是一种相对不常见的表示法，但我喜欢**将二进制字段元素表示为整数，采用更有效 bit 在右侧的位表示**。也就是说，$1=1, x_0=01=2,1+x_0=11=3,1+x_0+x_2=11001000=19$, 等等。上个例子中的 $1100101010001111$ 是 61779。
+这是一种相对不常见的表示法，但我喜欢**将二进制域元素表示为整数，采用更有效 bit 在右侧的位表示**。也就是说，$1=1, x_0=01=2,1+x_0=11=3,1+x_0+x_2=11001000=19$, 等等。上个例子中的 $1100101010001111$ 是 61779。
 
 > This is a relatively uncommon notation, but I like representing binary field elements as integers, taking the bit representation where more-significant bits are to the right. That is, $1=1, x_0=01=2,1+x_0=11=3,1+x_0+x_2=11001000=19$ , and so forth. $1100101010001111$ is, in this representation, $61779$.
 
@@ -524,7 +524,7 @@ $$
 
 > The last piece is the only slightly tricky one, because you have to apply the reduction rule, and replace $R_x*R_y*x_k^2$ with $R_x*R_y*(x_{k-1}*x_k+1)$ . There are more efficient ways to do multiplication, analogues of the [Karatsuba algorithm](https://en.wikipedia.org/wiki/Karatsuba_algorithm) and [fast Fourier transforms](https://vitalik.eth.limo/general/2019/05/12/fft.html), but I will leave it as an exercise to the interested reader to figure those out.
 
-二进制字段中的除法是通过结合乘法和倒数来完成的。一个简单的倒数算法应用了广义费马小定理。还有一个更复杂但更有效的反演算法，你可以在 [这里](https://ieeexplore.ieee.org/document/612935) 。你可以使用[这里](https://github.com/ethereum/research/blob/master/binius/binary_fields.py) 的代码来体验二进制字段的加法，乘法和除法。
+二进制域中的除法是通过结合乘法和倒数来完成的。一个简单的倒数算法应用了广义费马小定理。还有一个更复杂但更有效的反演算法，你可以在 [这里](https://ieeexplore.ieee.org/document/612935) 。你可以使用[这里](https://github.com/ethereum/research/blob/master/binius/binary_fields.py) 的代码来体验二进制域的加法，乘法和除法。
 
 > Division in binary fields is done by combining multiplication and inversion: $\frac35=3 \times \frac15$ . The "simple but slow" way to do inversion is an application of [generalized Fermat&#39;s little theorem](https://planetmath.org/fermatslittletheorem): $\frac1x=x^{2^{2^k}-2}$ for any $k$ where $2^{2^k}>x$ . In this case, $\frac15=5^{14}=14$ , and so $\frac35=3*14=9$ . There is also a more complicated but more efficient inversion algorithm, which you can find [here](https://ieeexplore.ieee.org/document/612935). You can use [the code here](https://github.com/ethereum/research/blob/master/binius/binary_fields.py) to play around with binary field addition, multiplication and division yourself.
 
@@ -657,7 +657,7 @@ $$
 
 > In practice, a major source of inefficiency comes from the fact that in real programs, most of the numbers we are working with are tiny: indices in for loops, True/False values, counters, and similar things. But when we "extend" the data using Reed-Solomon encoding to give it the redundancy needed to make Merkle proof-based checks safe, most of the "extra" values end up taking up the full size of a field, even if the original values are small.
 
-为了解决这个问题，我们希望域尽可能小。Plonky2 将我们从 256 位数字降低到 64 位数字，然后 Plonky3 进一步降低到 31 位。但即使这样也是次优的。使用二进制字段，我们可以处理单个位。这使得编码变得“密集”：如果实际基础数据具有 n 位，则编码将具有 n 位，扩展将具有 8 * n 位，并且没有额外的开销。
+为了解决这个问题，我们希望域尽可能小。Plonky2 将我们从 256 位数字降低到 64 位数字，然后 Plonky3 进一步降低到 31 位。但即使这样也是次优的。使用二进制域，我们可以处理单个位。这使得编码变得“密集”：如果实际基础数据具有 n 位，则编码将具有 n 位，扩展将具有 8 * n 位，并且没有额外的开销。
 
 > To get around this, we want to make the field as small as possible. Plonky2 brought us down from 256-bit numbers to 64-bit numbers, and then Plonky3 went further to 31 bits. But even this is sub-optimal. With binary fields, we can work over *individual bits*. This makes the encoding "dense": if your actual underlying data has `n` bits, then your encoding will have `n` bits, and the extension will have `8 * n` bits, with no extra overhead.
 
