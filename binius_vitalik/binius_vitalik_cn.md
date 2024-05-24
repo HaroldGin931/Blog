@@ -407,7 +407,7 @@ $$
 
 ## Binary fields
 
-最小的有限域是模为 2 的有限域$F_2$，这是在 $F_2$ 上的加法和乘法表：
+最小的有限域是模为 2 的有限域 $F_2$ ，这是在 $F_2$ 上的加法和乘法表：
 
 > The smallest possible field is arithmetic modulo 2, which is so small that we can write out its addition and multiplication tables:
 
@@ -416,7 +416,8 @@ $$
 | **0** | 0           | 1           |  | **0**  | 0           | 0           |
 | **1** | 1           | 0           |  | **1**  | 0           | 1           |
 
-通过扩展，我们能够得到一个更大的二进制域：我们对 $F_2$ （模为 2）进行扩域，定义方程 $x^2=x+1$ 的根$x$ ，我们可以得到如下的加法表和乘法表
+> 补充：这里的加法运算对应着计算机中的 XOR 乘法运算对应 AND 
+通过扩域，我们能够得到一个更大的二进制域：我们对 $F_2$ （模为 2）进行扩域，定义方程 $x^2=x+1$ 的根 $x$ ，我们可以得到如下的加法表和乘法表
 
 > We can make larger binary fields by taking extensions: if we start with $F_2$ (integers modulo 2) and then define $x$ where $x^2=x+1$, we get the following addition and multiplication tables:
 
@@ -434,17 +435,18 @@ $$
 - $x_0$ satisfies $x_0^2=x_0+1$
 - $x_1$ satisfies $x_1^2=x_0x_1+1$
 - $x_2$ satisfies $x_2^2=x_1x_2+1$
-- $x_3$ satisfies $x_3^2=x_3x_2+1$
+- $x_3$ satisfies $x_3^2=x_2x_3+1$
 
 > 补充：
 >
 > - $x_0^2=x_0+1$ 的解在 $F_2$ 上不存在，通过把这个解添加到 $F_2$ ，得到一个更大的域，即完成一次扩域，该方程在新的域上有解。
-> - [todo] $x_1, x_2, \ldots$ 像上面这样定义的原因
+> - [ ] TODO: $x_1, x_2, \ldots$ 像上面这样定义的原因
+>   - [x] 不完全解答，要确保每次新定义的多项式是之前没有出现过的，但是这种形式为什么一定是不可约的这件事，超出了我的能力范围。
 > - Vitalik 这里指的是，复数域是最大的代数域，你无法再通过代数扩张的方式得到一个比复数域还要大的域，且四元数不在我们讨论的范围内
 > - 实数域，复数域的元素有无穷多个，是无限域。
 > - 扩域：通过对原有域中引入一个新的元素，并将这个元素和原域中的所有元素做线性组合，所得出的全部结果就是这个扩域后的全部域元素，
-> - [todo] 扩域的形式定义 a+bx 及简短解释，基的定义
-> - 以 $F_2$ 到 $F_{2^2}$ 的扩域为例，当扩域只引入了一个元素时，你可以把原域的元素铺成一个横轴和一个纵轴，如下表左侧，然后对纵轴上的每个数字都乘上被引入的新元素（如右侧）得到的值再和横轴的数字做加法，即可得到 $F_{2^2}$ 中的全部元素
+> - 这种只引入一个新元素的扩域的形式定义为 a+bx 其中 a 和 b 都属于原来的域，
+> - 以 $F_2$ 到 $F_{2^2}$ 的扩域为例，当扩域只引入了一个元素时，你可以把原域的元素铺成一个横轴和一个纵轴，如下表左侧，然后对纵轴上的每个数字都乘上被引入的新元素（如右侧）得到的值再和横轴的数字做加法，即可得到 $F_{2^2}$ 中的全部元素，更严谨的说，这个是代数扩域。再多说一句，只要我们约定了基（多项式的基）的顺序，左表可以完全替代右表，因为左表是扩域后元素的分量形式
 >
 >> | $F_2$ | $0$     | $1$     |     | $F_{2^2}$      | $0$                | $1$                |
 >> | ------- | --------- | --------- | --- | ---------------- | -------------------- | -------------------- |
@@ -474,19 +476,19 @@ $$
 >
 > | $F_{2}$                  | $1$   |
 > | -------------------------- | ------- |
-> | 用$x_0$ 扩域，生成新的基 | $x_0$ |
+> | 用 $x_0$ 扩域，生成新的基 | $x_0$ |
 >
-> 得到 $F_{2^2}$有 2 个基：$1, x_0$，通过 $x_1$ 扩域后：
+> 得到 $F_{2^2}$有 2 个基： $1, x_0$ ，通过 $x_1$ 扩域后：
 >
 > | $F_{2^2}$                | $1$   | $x_0$    |
 > | -------------------------- | ------- | ---------- |
-> | 用$x_1$ 扩域，生成新的基 | $x_1$ | $x_1x_0$ |
+> | 用 $x_1$ 扩域，生成新的基 | $x_1$ | $x_1x_0$ |
 >
 > 得到 $F_{2^{2^2}}$，有 4 个基： $1, x_0, x_1, x_1x_0$ , 我们继续通过 $x_2$ 扩域:
 >
 > | $F_{2^{2^2}}$            | $1$   | $x_0$    | $x_1$    | $x_1x_0$    |
 > | -------------------------- | ------- | ---------- | ---------- | ------------- |
-> | 用$x_2$ 扩域，生成新的基 | $x_2$ | $x_2x_0$ | $x_2x_1$ | $x_2x_1x_0$ |
+> | 用 $x_2$ 扩域，生成新的基 | $x_2$ | $x_2x_0$ | $x_2x_1$ | $x_2x_1x_0$ |
 >
 > 得到 $F_{2^{2^3}}$ ， 有 8 个基，即 $1, x_0, x_1, x_1x_0, x_2, x_2x_0, x_2x_1, x_2x_1x_0$ ，不难发现，每一次扩域新增加的基是通过原有的每一个基 “乘上” 新元素得到的。
 >
@@ -499,7 +501,7 @@ $$
 >
 > 那么不难理解，一个 16 bits的数字按照一次扩域的定义 $a + bx_i$ 展开，我们有 $11001010+10001111 \times x_3$ 。
 
-这是一种相对不常见的表示法，但我喜欢**将二进制域元素表示为整数，采用更有效 bit 在右侧的位表示**。也就是说，$1=1, x_0=01=2,1+x_0=11=3,1+x_0+x_2=11001000=19$, 等等。上个例子中的 $1100101010001111$ 是 61779。
+这是一种相对不常见的表示法，但我喜欢**将二进制域元素表示为整数，并且低位在左，高位在右**。也就是说， $1=1, x_0=01=2,1+x_0=11=3,1+x_0+x_2=11001000=19$ , 等等。上个例子中的 $1100101010001111$ 是 61779。
 
 > This is a relatively uncommon notation, but I like representing binary field elements as integers, taking the bit representation where more-significant bits are to the right. That is, $1=1, x_0=01=2,1+x_0=11=3,1+x_0+x_2=11001000=19$ , and so forth. $1100101010001111$ is, in this representation, $61779$.
 
@@ -508,8 +510,7 @@ $$
 > Addition in binary fields is just XOR (and, incidentally, so is subtraction); note that this implies that $x+x=0$ for any $x$ . To multiply two elements $x \times y$, there's a pretty simple recursive algorithm: split each number into two halves:
 
 $$
-x=L_x+R_x \times x_k \\
-y=L_y+R_y\times x_k
+x=L_x+R_x \times x_k, y=L_y+R_y\times x_k
 $$
 
 然后我们使用乘法分配律可以得到
@@ -521,7 +522,7 @@ x\times y=(L_x\times L_y)+(L_x\times R_y)\times x_k+(R_x\times L_y)\times x_k+(R
 $$
 
 最后一部分是唯一有点棘手的，因为你必须应用 “reduction rule”。有更有效的方法来做乘法，类似于 [Karatsuba algorithm](https://en.wikipedia.org/wiki/Karatsuba_algorithm) 算法和[快速傅里叶变换](https://vitalik.eth.limo/general/2019/05/12/fft.html)，但我将把它作为一个练习留给有兴趣的读者去弄清楚。
-
+> 补充： Jade's note
 > The last piece is the only slightly tricky one, because you have to apply the reduction rule, and replace $R_x*R_y*x_k^2$ with $R_x*R_y*(x_{k-1}*x_k+1)$ . There are more efficient ways to do multiplication, analogues of the [Karatsuba algorithm](https://en.wikipedia.org/wiki/Karatsuba_algorithm) and [fast Fourier transforms](https://vitalik.eth.limo/general/2019/05/12/fft.html), but I will leave it as an exercise to the interested reader to figure those out.
 
 二进制域中的除法是通过结合乘法和倒数来完成的。一个简单的倒数算法应用了广义费马小定理。还有一个更复杂但更有效的反演算法，你可以在 [这里](https://ieeexplore.ieee.org/document/612935) 。你可以使用[这里](https://github.com/ethereum/research/blob/master/binius/binary_fields.py) 的代码来体验二进制域的加法，乘法和除法。
@@ -530,12 +531,11 @@ $$
 
 ![img](https://vitalik.eth.limo/images/binius/additiontable.png) ![img](https://vitalik.eth.limo/images/binius/multiplicationtable.png)
 
-[FIXME]感觉是16-bit的不是4-bit
-*左：16-bit 二进制域的加法表（表中元素是用 $1\text{,}x_0\text{,}x_1$ 和 $x_0x_1$ 组合而来的）右：乘法表*
+左：4-bit 二进制域的加法表（表中元素是用 $1\text{,}x_0\text{,}x_1$ 和 $x_0x_1$ 组合而来的）右：乘法表
 
 > *Left: addition table for four-bit binary field elements (ie. elements made up only of combinations of $1\text{,}x_0\text{,}x_1\text{ and }x_0x_1$). Right: multiplication table for four-bit binary field elements.*
 
-这种二进制域最棒的特性莫过于其结合了一些“常规的”整数运算和模运算。如同整数一样，二进制域中的元素是没有上限的，只要你进行域扩张操作，但也具有模运算的好处，在二进制域上进行操作时，得到的结果依然在这个域内。例如：如果你在有限域上连续的计算42的0到255次幂并取模，你会得到：
+这种二进制域最棒的特性莫过于其结合了一些“常规的”整数运算和模运算。如同整数一样，二进制域中的元素是没有上限的，只要你进行域扩张操作，但也具有模运算的好处，在二进制域上进行操作时，得到的结果依然在这个域内。例如：如果你在有限域上连续的计算 42 的 0 到 255 次幂并取模，你会得到：
 
 > The beautiful thing about this type of binary field is that it combines some of the best parts of "regular" integers and modular arithmetic. Like regular integers, binary field elements are unbounded: you can keep extending as far as you want. But like modular arithmetic, if you do operations over values within a certain size limit, all of your answers also stay within the same bound. For example, if you take successive powers of $42$, you get:
 
@@ -547,7 +547,7 @@ $1,42,199,215,245,249,180,91, \ldots$
 >
 > 补充：这里我实在是没算明白这里是怎么算的。。。
 
-就像正整数和模运算一样，它们遵循通常的数学定律：$a \times b=b \times a, a \times (b+c) = a \times b+a \times c$，甚至还有一些奇怪的规则。比如： $a^2+b^2=(a+b)^2$ （因为 $(a+b)^2 = a^2 + 2ab + b^2$ 其中 $2ab \mod 2 = 0$ ）
+就像正整数和模运算一样，它们遵循通常的数学定律： $a \times b=b \times a, a \times (b+c) = a \times b+a \times c$ ，甚至还有一些奇怪的规则。比如： $a^2+b^2=(a+b)^2$ （因为 $(a+b)^2 = a^2 + 2ab + b^2$ 其中 $2ab \mod 2 = 0$ ）
 
 > And like *both* regular integers and modular arithmetic, they obey the usual laws of mathematics: $a \times b=b \times a,a \times (b+c)=a \times b+a \times c$, and even some strange new laws, eg. $a^2+b^2=(a+b)^2$ (the usual $2ab$ term is missing, because in a binary field, $1+1=0$).
 
