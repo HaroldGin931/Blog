@@ -102,7 +102,7 @@ graph TD;
  r --> rr["(1, 1, 1)"]
 
  ll ==> lll["(1, 0, 0, 0)"]
- ll ==> llr["(1, 0, 0, 0)"]
+ ll ==> llr["(1, 0, 0, 1)"]
  style lll fill:#FF31FF
 
  lr --> lrl["..."]
