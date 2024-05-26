@@ -139,9 +139,16 @@ g_1(\textcolor{red}{X_1})= \sum_{b_2, b_3, \ldots, b_v \in\{0,1\}^{\textcolor{re
 $$
 
 在 $X_1 = 0, X_1 = 1$ 上计算的结果.
-受这一点启发, 我们把原本从Paul处索要 $(1, 0), (1, 1)$ 更改为从 Paul 索要多项式 $g_1(X_1)$, Paul可以通过$$(1, 0), (1, 1)$$插值出$$g_1(X_1)$$.
+受这一点启发, 我们把原本从 Paul 处索要 $(1, 0), (1, 1)$ 更改为从 Paul 索要多项式 $g_1(X_1)$, Paul 可以通过 $(1, 0), (1, 1)$ 插值出 $g_1(X_1)$.
 
-即：$$g_1(X_1) = \sum_{b_2, b_3, \ldots, b_v \in\{0,1\}^{\textcolor{red}{v-1}} } g(X_1, b_2, b_3,...,b_v) = \sum_{b_2, b_3, \ldots, b_v \in\{0,1\}^{\textcolor{red}{v-1}} }g(0, b_2, b_3,...,b_v) \cdot(1-X_1) + \sum_{b_2, b_3, \ldots, b_v \in\{0,1\}^{\textcolor{red}{v-1}} }g(1, b_2, b_3,...,b_v) \cdot X_1$$
+即：
+
+$$
+\begin{align*}
+g_1(X_1) =& \sum_{b_2, b_3, \ldots, b_v \in\{0,1\}^{\textcolor{red}{v-1}} } g(X_1, b_2, b_3,...,b_v) \\
+=& \sum_{b_2, b_3, \ldots, b_v \in\{0,1\}^{\textcolor{red}{v-1}} } g(0, b_2, b_3,...,b_v) \cdot(1-X_1) + \sum_{b_2, b_3, \ldots, b_v \in\{0,1\}^{\textcolor{red}{v-1}} }g(1, b_2, b_3,...,b_v) \cdot X_1
+\end{align*}
+$$
 
 然后 Vivian 自己计算 $g_1(0), g_1(1)$, 并验证 H 是否等于 $g_1(0) + g_1(1)$,
 至此我们在下一层计算时, 就不再需要验证从 Pual 要来的两个值, 而是验证从 Pual 要来的一个多项式是否正确
